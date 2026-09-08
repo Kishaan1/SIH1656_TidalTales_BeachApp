@@ -1353,8 +1353,14 @@ function updateBottomSheetContent(beach) {
   // Reset Gemini AI box for new beach selection
   const geminiBox = document.getElementById('gemini-response-box');
   const geminiOutput = document.getElementById('gemini-response-text');
+  const userBubble = document.getElementById('ai-user-bubble');
+  const userText = document.getElementById('ai-user-bubble-text');
+  const aiBubble = document.getElementById('ai-message-bubble');
   if (geminiBox) geminiBox.style.display = 'none';
   if (geminiOutput) geminiOutput.innerHTML = '';
+  if (userBubble) userBubble.style.display = 'none';
+  if (userText) userText.textContent = '';
+  if (aiBubble) aiBubble.style.display = 'none';
 
   // Beach name & subtitle
   const beachNameEl = document.getElementById('sheet-beach-name') || document.getElementById('detail-beach-name');
@@ -2804,9 +2810,15 @@ async function handleGeminiQuery(query) {
   const responseBox = document.getElementById('gemini-response-box');
   const spinner = document.getElementById('gemini-loading-spinner');
   const outputEl = document.getElementById('gemini-response-text');
+  const userBubble = document.getElementById('ai-user-bubble');
+  const userText = document.getElementById('ai-user-bubble-text');
+  const aiBubble = document.getElementById('ai-message-bubble');
   const sendBtn = document.getElementById('btn-ask-gemini');
   const inputEl = document.getElementById('gemini-custom-input');
-  const chips = document.querySelectorAll('.gemini-chip');
+  const chips = document.querySelectorAll('.gemini-chip, .ai-prompt-chip');
+
+  const sendIconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+  const thinkingIconSvg = `<span style="display:inline-block; animation:spin 1s linear infinite; font-size:12px;">⏳</span>`;
 
   // Collect active emergency alerts from reading
   const activeAlerts = [];
@@ -2836,17 +2848,23 @@ async function handleGeminiQuery(query) {
     activeAlerts,
   };
 
-  if (responseBox) responseBox.style.display = 'block';
+  if (responseBox) responseBox.style.display = 'flex';
+  if (userBubble && userText) {
+    userText.textContent = query.trim();
+    userBubble.style.display = 'inline-block';
+  }
   if (spinner) spinner.style.display = 'flex';
+  if (aiBubble) aiBubble.style.display = 'none';
   if (outputEl) outputEl.innerHTML = '';
   if (sendBtn) {
     sendBtn.disabled = true;
-    sendBtn.textContent = 'Thinking...';
+    sendBtn.innerHTML = thinkingIconSvg;
   }
   chips.forEach(c => (c.style.pointerEvents = 'none'));
 
   try {
     const answer = await askGeminiAboutBeach(query.trim(), beach);
+    if (aiBubble) aiBubble.style.display = 'flex';
     if (outputEl) {
       outputEl.innerHTML = formatGeminiResponse(answer);
     }
@@ -2863,6 +2881,7 @@ async function handleGeminiQuery(query) {
     }, 50);
   } catch (err) {
     console.error('Gemini query error:', err);
+    if (aiBubble) aiBubble.style.display = 'flex';
     if (outputEl) {
       outputEl.innerHTML = `
         <div style="color: var(--brick-red); font-weight: bold; margin-bottom: 4px;">⚠️ Coastal Advisory Unavailable</div>
@@ -2873,7 +2892,7 @@ async function handleGeminiQuery(query) {
     if (spinner) spinner.style.display = 'none';
     if (sendBtn) {
       sendBtn.disabled = false;
-      sendBtn.textContent = 'Ask AI';
+      sendBtn.innerHTML = sendIconSvg;
     }
     chips.forEach(c => (c.style.pointerEvents = 'auto'));
   }

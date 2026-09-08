@@ -563,31 +563,47 @@
               Ask Gemini for an intelligent, real-time safety briefing based on live INCOIS wave, wind, and swell telemetry.
             </p>
 
-            <!-- Quick Query Prompt Chips -->
+            <!-- Soft Tonal Suggestion Chips -->
             <div class="gemini-chips-row">
-              <button class="gemini-chip" data-q="Can kids swim safely?">
+              <button type="button" class="gemini-chip ai-prompt-chip" data-q="Can kids swim safely?">
                 👨‍👩‍👧 Can kids swim safely?
               </button>
-              <button class="gemini-chip" data-q="Explain rip current risks">
+              <button type="button" class="gemini-chip ai-prompt-chip" data-q="Explain rip current risks">
                 🌊 Explain rip current risks
               </button>
-              <button class="gemini-chip" data-q="Best safe activities today">
+              <button type="button" class="gemini-chip ai-prompt-chip" data-q="Best safe activities today">
                 🏄 Best safe activities today
               </button>
             </div>
 
-            <!-- Custom Query Input -->
-            <div class="gemini-input-row" style="margin-top: 8px;">
+            <!-- Soft Rounded Pill Input Bar -->
+            <div class="gemini-input-row ai-input-bar-wrapper" style="margin-top: 10px;">
               <input type="text" id="gemini-custom-input" class="gemini-text-input" placeholder="Ask custom coastal safety question..." />
-              <button id="btn-ask-gemini" class="gemini-send-btn">Ask AI</button>
+              <button id="btn-ask-gemini" class="gemini-send-btn ai-send-btn" title="Send question to Tidal AI" aria-label="Ask Tidal AI">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
             </div>
 
-            <!-- Response Container (Auto-sizing & scrolling) -->
+            <!-- Conversational Chat Messages Container -->
             <div id="gemini-response-box" class="gemini-response-box ai-response-box" style="display: none;">
+              <!-- User Message Bubble (Right-aligned) -->
+              <div id="ai-user-bubble" class="ai-user-bubble" style="display: none;">
+                <span id="ai-user-bubble-text"></span>
+              </div>
+
+              <!-- Loading Spinner -->
               <div id="gemini-loading-spinner" class="gemini-loading" style="display: none;">
                 <span>🌊</span> Analyzing live INCOIS ocean telemetry with Gemini AI...
               </div>
-              <div id="gemini-response-text" class="gemini-text-output"></div>
+
+              <!-- AI Advisory Bubble (Left-aligned with Avatar) -->
+              <div id="ai-message-bubble" class="ai-message-bubble" style="display: none;">
+                <div class="ai-avatar-badge" title="Tidal AI Assistant">✨</div>
+                <div id="gemini-response-text" class="gemini-text-output ai-bubble-text"></div>
+              </div>
             </div>
           </div>
         </div>

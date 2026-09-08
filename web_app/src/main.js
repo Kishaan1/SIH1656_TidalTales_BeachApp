@@ -1209,8 +1209,13 @@ function selectBeach(id) {
 }
 
 function openBottomSheet() {
-  document.getElementById('bottom-sheet')?.classList.add('active');
-  document.getElementById('sheet-backdrop')?.classList.add('active');
+  const sheet = document.getElementById('bottom-sheet');
+  const backdrop = document.getElementById('sheet-backdrop');
+  sheet?.classList.add('active');
+  backdrop?.classList.add('active');
+  const contentEl = sheet?.querySelector('.detail-sheet-content');
+  if (contentEl) contentEl.scrollTop = 0;
+  if (sheet) sheet.scrollTop = 0;
 }
 
 function closeBottomSheet() {
@@ -1339,18 +1344,46 @@ async function shareBeachLocation(beach) {
 function updateBottomSheetContent(beach) {
   const result = evaluateSuitability(beach.reading);
 
+  // Reset detail sheet scroll position to top
+  const sheet = document.getElementById('bottom-sheet');
+  const contentEl = sheet?.querySelector('.detail-sheet-content');
+  if (contentEl) contentEl.scrollTop = 0;
+  if (sheet) sheet.scrollTop = 0;
+
   // Reset Gemini AI box for new beach selection
   const geminiBox = document.getElementById('gemini-response-box');
   const geminiOutput = document.getElementById('gemini-response-text');
   if (geminiBox) geminiBox.style.display = 'none';
   if (geminiOutput) geminiOutput.innerHTML = '';
 
-  document.getElementById('sheet-beach-name').textContent = beach.name;
+  // Beach name & subtitle
+  const beachNameEl = document.getElementById('sheet-beach-name') || document.getElementById('detail-beach-name');
+  if (beachNameEl) beachNameEl.textContent = beach.name;
+
   const stateText = beach.country === 'India'
     ? `${beach.state} · Bay of Bengal / Arabian Sea`
     : `${beach.state ? beach.state + ' · ' : ''}${beach.country || 'International Coast'}`;
-  document.getElementById('sheet-beach-state').textContent = stateText;
-  document.getElementById('sheet-beach-description').textContent = beach.description || '';
+  const stateEl = document.getElementById('sheet-beach-state');
+  if (stateEl) stateEl.textContent = stateText;
+
+  const descEl = document.getElementById('sheet-beach-description');
+  if (descEl) descEl.textContent = beach.description || '';
+
+  // Hero Imagery
+  const heroImg = document.getElementById('detail-hero-img');
+  if (heroImg) {
+    heroImg.src = beach.imageUrl || DEFAULT_BEACH_IMAGE;
+    heroImg.alt = `${beach.name} coastal landscape`;
+    heroImg.onerror = () => { heroImg.src = DEFAULT_BEACH_IMAGE; };
+  }
+
+  // Header Suitability Badge
+  const detailSuitability = document.getElementById('detail-suitability');
+  if (detailSuitability) {
+    detailSuitability.textContent = result.status;
+    detailSuitability.style.backgroundColor = result.statusColor;
+    detailSuitability.style.color = '#fff';
+  }
 
   const sourceBadgeEl = document.getElementById('detail-source-badge');
   if (sourceBadgeEl) {
@@ -2738,6 +2771,7 @@ function initFilters() {
   });
 
   document.getElementById('close-sheet-btn')?.addEventListener('click', closeBottomSheet);
+  document.getElementById('btn-close-detail')?.addEventListener('click', closeBottomSheet);
   document.getElementById('sheet-backdrop')?.addEventListener('click', closeBottomSheet);
 }
 
@@ -2817,7 +2851,9 @@ async function handleGeminiQuery(query) {
       outputEl.innerHTML = formatGeminiResponse(answer);
     }
     playAlertChime();
-    responseBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => {
+      responseBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   } catch (err) {
     console.error('Gemini query error:', err);
     if (outputEl) {

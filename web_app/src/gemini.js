@@ -104,7 +104,7 @@ Rules:
     ],
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 250,
+      maxOutputTokens: 500,
     }
   };
 

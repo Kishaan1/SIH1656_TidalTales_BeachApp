@@ -2852,7 +2852,14 @@ async function handleGeminiQuery(query) {
     }
     playAlertChime();
     setTimeout(() => {
-      responseBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const drawer = document.getElementById('bottom-sheet');
+      if (drawer && responseBox) {
+        const boxTop = responseBox.offsetTop;
+        drawer.scrollTo({
+          top: Math.max(0, boxTop - 80),
+          behavior: 'smooth'
+        });
+      }
     }, 50);
   } catch (err) {
     console.error('Gemini query error:', err);

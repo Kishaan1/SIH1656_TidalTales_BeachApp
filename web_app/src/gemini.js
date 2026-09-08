@@ -104,12 +104,12 @@ Rules:
     ],
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 500,
+      maxOutputTokens: 2048,
     }
   };
 
   const apiKey = getActiveGeminiKey();
-  const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+  const models = ['gemini-3.6-flash', 'gemini-flash-latest'];
 
   for (const model of models) {
     try {
@@ -120,9 +120,14 @@ Rules:
       });
       if (response.ok) {
         const data = await response.json();
-        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        let answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (answer && answer.trim()) {
-          return answer.trim();
+          answer = answer.trim();
+          // Guarantee clean terminal punctuation if cut off mid-sentence
+          if (/[,:;\-\(]\s*$/.test(answer)) {
+            answer = answer.replace(/[,:;\-\(]\s*$/, '') + '.';
+          }
+          return answer;
         }
       }
     } catch (err) {

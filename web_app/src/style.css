@@ -2201,18 +2201,15 @@ body.device-preview-active .device-status-bar {
 
 .detail-actions-footer,
 .sheet-actions-row {
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0.75rem 1.25rem;
-  background: linear-gradient(180deg, rgba(250, 241, 228, 0) 0%, #FAF1E4 35%, #FAF1E4 100%);
-  border-top: 1px solid rgba(43, 76, 86, 0.08);
+  position: relative;
+  margin-top: 18px;
+  padding: 14px 0 6px;
+  border-top: 1.5px solid var(--deckle-border);
+  background: transparent;
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  z-index: 10;
-  margin-top: 0;
+  z-index: 5;
 }
 
 .detail-actions-footer .btn-navigate-beach,
@@ -2438,15 +2435,15 @@ body.device-preview-active .device-status-bar {
   background: #FAF1E4;
   border-radius: 28px 28px 0 0;
   border-top: 3px solid var(--deckle-border);
-  padding: 0;
+  padding: 16px 20px 24px;
   z-index: 650;
   transform: translateY(105%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 -10px 30px rgba(44, 34, 30, 0.25);
-  max-height: 85%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Header and footer stay pinned; body scrolls */
+  max-height: 88%;
+  overflow-y: auto; /* Full drawer body scrolls cleanly */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .bottom-sheet.active,
@@ -2459,24 +2456,22 @@ body.device-preview-active .device-status-bar {
   height: 4px;
   background-color: var(--sand-deep);
   border-radius: 4px;
-  margin: 8px auto 4px;
+  margin: 0 auto 12px;
   flex: 0 0 auto;
 }
 
-/* Pinned Sticky Top Header */
+/* Detail Sheet Header in Natural Document Flow (No fixed overlap) */
 .detail-sheet-header,
 .sheet-header {
-  flex: 0 0 auto;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 12px 18px 10px;
-  background: #FAF1E4;
-  border-bottom: 1px solid rgba(43, 76, 86, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 12;
-  margin-bottom: 0;
+  padding: 0 0 12px;
+  background: transparent;
+  border-bottom: 1.5px solid var(--deckle-border);
+  margin-bottom: 14px;
+  z-index: 5;
 }
 
 .header-titles {
@@ -2539,13 +2534,10 @@ body.device-preview-active .device-status-bar {
   margin-top: 3px;
 }
 
-/* Scrollable Content Body */
+/* Detail Sheet Content in Natural Flow (No secondary inner scrollbar) */
 .detail-sheet-content {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 1rem 1.25rem 5.5rem 1.25rem; /* 5.5rem bottom padding prevents sticky footer overlap */
-  scrollbar-width: thin;
+  overflow: visible;
+  padding: 0;
 }
 
 .detail-hero-box {
@@ -3350,9 +3342,11 @@ body:not(.authenticated) #top-alert-banner,
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto; /* Full drawer body scrolls cleanly */
+    overscroll-behavior: contain;
+    padding: 20px 24px 28px;
+    scrollbar-width: thin;
+    display: block;
   }
 
   body:not(.device-preview-active) .bottom-sheet.active,
@@ -3537,9 +3531,11 @@ body:not(.authenticated) #top-alert-banner,
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 650;
     background: #FAF1E4;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Header and footer stay pinned; body scrolls */
+    overflow-y: auto; /* Full drawer body scrolls cleanly */
+    overscroll-behavior: contain;
+    padding: 18px 22px 28px;
+    scrollbar-width: thin;
+    display: block;
   }
 
   body:not(.device-preview-active) .bottom-sheet.active,

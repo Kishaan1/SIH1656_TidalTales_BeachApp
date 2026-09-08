@@ -209,6 +209,20 @@ function initMapAndDashboard() {
   selectBeach(beaches[0].id);
 }
 
+function mountDashboard() {
+  const rawSession = localStorage.getItem('tidal_session') || localStorage.getItem('tidal_user_session');
+  let session = null;
+  if (rawSession) {
+    try {
+      session = JSON.parse(rawSession);
+    } catch (e) {}
+  }
+  // Ensure mountDashboard is never executed on app load if session.passcodeVerified !== true
+  if (session && session.isAuthenticated && (session.passcodeVerified === true || session.role === 'guest')) {
+    initMapAndDashboard();
+  }
+}
+
 function enforceAuthGate() {
   const rawSession = localStorage.getItem('tidal_session') || localStorage.getItem('tidal_user_session');
   let isAuthenticated = false;
@@ -217,7 +231,8 @@ function enforceAuthGate() {
   if (rawSession) {
     try {
       session = JSON.parse(rawSession);
-      isAuthenticated = Boolean(session && (session.isAuthenticated || session.role || session.email));
+      // Strictly require passcodeVerified === true (or guest pass)
+      isAuthenticated = Boolean(session && session.isAuthenticated && (session.passcodeVerified === true || session.role === 'guest'));
     } catch (err) {
       console.error("Invalid session structure:", err);
       localStorage.removeItem('tidal_session');
@@ -258,7 +273,7 @@ function enforceAuthGate() {
 
     if (authStatusPill) authStatusPill.textContent = 'Logged Out';
     if (topAuthBtn) {
-      topAuthBtn.innerHTML = `🔒 Auth State: <span id="top-auth-status">Logged Out</span>`;
+      topAuthBtn.innerHTML = `<span id="auth-state-badge">🔒 Auth State: <span id="top-auth-status">Logged Out</span></span>`;
     }
 
     // Stop execution: DO NOT mount map or dashboard when not logged in
@@ -298,7 +313,7 @@ function enforceAuthGate() {
   const statusText = isOwner ? 'Owner [Test Pass]' : (currentUser.role === 'guest' ? 'Guest Pass' : 'Verified Explorer');
   if (authStatusPill) authStatusPill.textContent = statusText;
   if (topAuthBtn) {
-    topAuthBtn.innerHTML = `🔓 Auth State: <span id="top-auth-status">${statusText}</span>`;
+    topAuthBtn.innerHTML = `<span id="auth-state-badge">🔓 Auth State: <span id="top-auth-status">${statusText}</span></span>`;
   }
   if (greetingEl) {
     greetingEl.textContent = isOwner 
@@ -307,7 +322,7 @@ function enforceAuthGate() {
   }
 
   // Proceed with initializing map, telemetry, and carousel only now
-  initMapAndDashboard();
+  mountDashboard();
   updateTopAlertBanner();
 
   // Recalculate Leaflet map container dimensions and refresh markers/cards
@@ -436,60 +451,158 @@ function initAuth() {
     });
   });
 
+  // Passcode Verification Helpers & Security Logic
+  function updateAuthBadge(roleText) {
+    const authStatusPill = document.getElementById('top-auth-status');
+    const topAuthBtn = document.getElementById('header-auth-gate-btn');
+    const badgeEl = document.getElementById('auth-state-badge');
+    const text = roleText || 'Verified Explorer';
+
+    if (authStatusPill) authStatusPill.textContent = text;
+    if (topAuthBtn) {
+      topAuthBtn.innerHTML = `<span id="auth-state-badge">🔓 Auth State: <span id="top-auth-status">${text}</span></span>`;
+    } else if (badgeEl) {
+      badgeEl.innerHTML = `🔓 Auth State: <span id="top-auth-status">${text}</span>`;
+    }
+  }
+
+  function clearPinInputs() {
+    pinDigits.forEach(d => {
+      d.value = '';
+      d.classList.remove('filled');
+    });
+    pinDigits[0]?.focus();
+  }
+
+  function showPasscodeError(msg = 'Invalid Compass PIN. Access Denied.') {
+    showHazardToast('Access Denied', msg);
+    const matrix = document.getElementById('pin-matrix');
+    if (matrix) {
+      matrix.classList.add('shake');
+      setTimeout(() => matrix.classList.remove('shake'), 450);
+    }
+  }
+
+  function openPasscodeModal(targetUser = 'owner@tidaltales.in') {
+    const authScreen = document.getElementById('auth-screen');
+    const dashboardView = document.getElementById('home-dashboard') || document.getElementById('dashboard-view');
+
+    if (authScreen) {
+      authScreen.classList.remove('hidden');
+      authScreen.style.removeProperty('display');
+    }
+    if (dashboardView) {
+      dashboardView.classList.add('hidden');
+      dashboardView.style.setProperty('display', 'none', 'important');
+    }
+
+    if (tabSignIn && tabSignUp && signInFlow && formSignUp) {
+      tabSignIn.classList.add('active');
+      tabSignUp.classList.remove('active');
+      signInFlow.classList.add('active');
+      formSignUp.classList.remove('active');
+    }
+
+    if (emailInput) {
+      emailInput.value = targetUser;
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    goToPasscodeStep(targetUser);
+    clearPinInputs();
+    showHazardToast('🔒 Passcode Required', 'Please enter your 4-digit Compass PIN (Owner: 2026)');
+  }
+
+  function closePasscodeModal() {
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen) {
+      authScreen.classList.add('hidden');
+      authScreen.style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  function verifyPasscode(enteredPin) {
+    const MASTER_OWNER_PIN = '2026';
+    const handle = emailInput?.value?.trim() || displayUserId?.textContent?.trim() || 'owner@tidaltales.in';
+    const isOwner = handle.toLowerCase().includes('owner') || handle.toLowerCase() === 'owner@tidaltales.in';
+
+    if (isOwner) {
+      if (enteredPin === MASTER_OWNER_PIN) {
+        const ownerSession = {
+          isAuthenticated: true,
+          passcodeVerified: true,
+          role: 'Owner [Test Pass]',
+          user: 'owner@tidaltales.in',
+          name: 'Chief Oceanographer (Owner)',
+          email: 'owner@tidaltales.in',
+          permissions: ['bypass_verification', 'full_sandbox_sliders', 'owner_test_pass'],
+          timestamp: Date.now(),
+          loggedInAt: Date.now(),
+        };
+        localStorage.setItem('tidal_session', JSON.stringify(ownerSession));
+        localStorage.setItem('tidal_user_session', JSON.stringify(ownerSession));
+        closePasscodeModal();
+        updateAuthBadge('Owner [Test Pass]');
+        mountDashboard();
+        showHazardToast('🔓 Compass Unlocked', 'Welcome ashore, Chief Oceanographer!');
+        checkAuthState();
+        return true;
+      } else {
+        showPasscodeError('Invalid Compass PIN. Access Denied.');
+        clearPinInputs();
+        return false;
+      }
+    } else {
+      if (enteredPin && enteredPin.length === 4) {
+        let userName = 'Coastal Explorer';
+        if (handle.includes('@')) {
+          const prefix = handle.split('@')[0].replace(/[\._\-]/g, ' ');
+          userName = prefix.replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+        } else {
+          userName = `Explorer ${handle.slice(-4)}`;
+        }
+        const explorerSession = {
+          isAuthenticated: true,
+          passcodeVerified: true,
+          role: 'explorer',
+          user: handle,
+          name: userName,
+          email: handle,
+          timestamp: Date.now(),
+          loggedInAt: Date.now(),
+        };
+        localStorage.setItem('tidal_session', JSON.stringify(explorerSession));
+        localStorage.setItem('tidal_user_session', JSON.stringify(explorerSession));
+        closePasscodeModal();
+        updateAuthBadge('Verified Explorer');
+        mountDashboard();
+        showHazardToast('🔓 Compass Unlocked', `Welcome ashore, ${userName}!`);
+        checkAuthState();
+        return true;
+      } else {
+        showPasscodeError('Invalid Compass PIN. Access Denied.');
+        clearPinInputs();
+        return false;
+      }
+    }
+  }
+
   // Step 2 Passcode Submission & Verification
   function handlePasscodeSubmit() {
-    const handle = emailInput?.value?.trim() || 'owner@tidaltales.in';
     const pin = Array.from(pinDigits).map(d => d.value.trim()).join('');
 
     if (pin.length < 4) {
-      showHazardToast('Passcode Incomplete', 'Please enter all 4 digits of your compass passcode.');
+      showPasscodeError('Please enter all 4 digits of your compass passcode.');
       const firstEmpty = Array.from(pinDigits).find(d => !d.value);
       if (firstEmpty) firstEmpty.focus();
       return;
     }
 
-    const isOwnerAuth = handle.toLowerCase().includes('owner') || handle.toLowerCase() === 'owner@tidaltales.in';
-    let userName = 'Coastal Explorer';
-    let role = 'explorer';
-    let permissions = [];
-
-    if (isOwnerAuth) {
-      userName = 'Chief Oceanographer (Owner)';
-      role = 'owner';
-      permissions = ['bypass_verification', 'full_sandbox_sliders', 'owner_test_pass'];
-    } else if (handle.includes('@')) {
-      const prefix = handle.split('@')[0].replace(/[\._\-]/g, ' ');
-      userName = prefix.replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-    } else {
-      userName = `Explorer ${handle.slice(-4)}`;
-    }
-
     btnSubmitPasscode?.classList.add('loading');
-    const delayMs = isOwnerAuth ? 120 : 350;
-
     setTimeout(() => {
       btnSubmitPasscode?.classList.remove('loading');
-      const sessionData = {
-        isAuthenticated: true,
-        user: handle,
-        name: userName,
-        email: handle,
-        role,
-        permissions,
-        isOwner: isOwnerAuth,
-        timestamp: Date.now(),
-        loggedInAt: Date.now(),
-      };
-
-      // Store in both tidal_session and tidal_user_session for complete backward & forward compatibility
-      localStorage.setItem('tidal_session', JSON.stringify(sessionData));
-      localStorage.setItem('tidal_user_session', JSON.stringify(sessionData));
-
-      console.log(`[PASSCODE VERIFIED] User: ${sessionData.email} | Role: ${sessionData.role}`);
-      showHazardToast('🔓 Compass Unlocked', `Welcome ashore, ${userName}!`);
-
-      checkAuthState();
-    }, delayMs);
+      verifyPasscode(pin);
+    }, 120);
   }
 
   btnSubmitPasscode?.addEventListener('click', handlePasscodeSubmit);
@@ -689,6 +802,7 @@ function initAuth() {
   document.getElementById('quick-guest-btn')?.addEventListener('click', () => {
     const guestSession = {
       isAuthenticated: true,
+      passcodeVerified: true,
       user: 'guest@tidaltales.in',
       name: 'Guest Explorer',
       email: 'guest@tidaltales.in',
@@ -711,27 +825,30 @@ function initAuth() {
     }
   });
 
-  // Desktop Auth Gate Status Toggle Button
-  document.getElementById('header-auth-gate-btn')?.addEventListener('click', () => {
-    if (localStorage.getItem('tidal_user_session') || localStorage.getItem('tidal_session')) {
-      localStorage.removeItem('tidal_session');
-      localStorage.removeItem('tidal_user_session');
+  // Desktop Auth Gate Status Toggle Button / Auth Pill
+  // Strict Passcode Gate: NEVER directly sets isAuthenticated = true or writes session on click!
+  const authPill = document.getElementById('auth-state-badge') || document.getElementById('header-auth-gate-btn');
+  const headerAuthBtn = document.getElementById('header-auth-gate-btn');
+
+  function handleAuthPillClick(e) {
+    e?.stopPropagation();
+    const session = JSON.parse(localStorage.getItem('tidal_session') || '{}');
+    if (!session.passcodeVerified) {
+      openPasscodeModal('owner@tidaltales.in');
     } else {
-      const ownerSession = {
-        isAuthenticated: true,
-        user: 'owner@tidaltales.in',
-        name: 'Chief Oceanographer (Owner)',
-        email: 'owner@tidaltales.in',
-        role: 'owner',
-        permissions: ['bypass_verification', 'full_sandbox_sliders', 'owner_test_pass'],
-        timestamp: Date.now(),
-        loggedInAt: Date.now(),
-      };
-      localStorage.setItem('tidal_session', JSON.stringify(ownerSession));
-      localStorage.setItem('tidal_user_session', JSON.stringify(ownerSession));
+      if (confirm('Step ashore and sign out of your coastal journal?')) {
+        localStorage.removeItem('tidal_session');
+        localStorage.removeItem('tidal_user_session');
+        checkAuthState();
+        goToIdentityStep();
+      }
     }
-    checkAuthState();
-  });
+  }
+
+  authPill?.addEventListener('click', handleAuthPillClick);
+  if (headerAuthBtn && headerAuthBtn !== authPill) {
+    headerAuthBtn.addEventListener('click', handleAuthPillClick);
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -2780,6 +2897,7 @@ function initSettings() {
   profileBtns.owner?.addEventListener('click', () => {
     const ownerSession = {
       isAuthenticated: true,
+      passcodeVerified: true,
       user: 'owner@tidaltales.in',
       name: 'Chief Oceanographer (Owner)',
       email: 'owner@tidaltales.in',
@@ -2799,6 +2917,7 @@ function initSettings() {
   profileBtns.registered?.addEventListener('click', () => {
     const explorerSession = {
       isAuthenticated: true,
+      passcodeVerified: true,
       user: 'arun.explorer@tidaltales.in',
       name: 'Arun Kumar',
       email: 'arun.explorer@tidaltales.in',
@@ -2817,6 +2936,7 @@ function initSettings() {
   profileBtns.guest?.addEventListener('click', () => {
     const guestSession = {
       isAuthenticated: true,
+      passcodeVerified: true,
       user: 'guest@tidaltales.in',
       name: 'Guest Explorer',
       email: 'guest@tidaltales.in',

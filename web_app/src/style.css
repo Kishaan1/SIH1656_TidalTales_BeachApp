@@ -660,6 +660,16 @@ body.device-preview-active .device-status-bar {
   margin: 16px 0 10px;
 }
 
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.pin-input-matrix.shake {
+  animation: pinShake 0.45s ease-in-out;
+}
+
 .pin-digit {
   width: 54px;
   height: 60px;

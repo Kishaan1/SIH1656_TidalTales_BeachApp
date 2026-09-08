@@ -29,7 +29,7 @@ export function saveCustomGeminiKey(key) {
  */
 export async function askGeminiAboutBeach(userQuery, beach) {
   const beachName = beach?.name || 'Coastal Beach';
-  const location = beach?.location || (beach?.state ? `${beach.state}, India` : 'Indian Coastline');
+  const location = beach?.location || (beach?.state ? `${beach.state}, ${beach?.country || 'India'}` : (beach?.country || 'Coastal Coastline'));
   
   // Extract live oceanographic numbers (support flat or nested reading properties)
   const waveHeight = beach?.waveHeight !== undefined 

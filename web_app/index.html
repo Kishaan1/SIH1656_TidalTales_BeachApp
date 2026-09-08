@@ -241,7 +241,7 @@
               type="text"
               id="coastal-search-input"
               class="coastal-search-input"
-              placeholder="Search beach, district, or coastal zone..."
+              placeholder="Search any global beach, coastline, or district..."
               autocomplete="off"
               spellcheck="false"
             />
@@ -255,19 +255,31 @@
           </div>
         </div>
 
-        <!-- Quick Category Filter Chips -->
+        <!-- Quick Category & Regional Filter Chips -->
         <nav id="main-filter-toolbar" class="filter-toolbar" aria-label="Quick Category Filter Chips">
-          <button class="filter-pill active" data-filter="all">🏖️ All Coastlines</button>
+          <button class="filter-pill active" data-filter="all">🌍 All Coastlines</button>
+          <button class="filter-pill" data-filter="india">🇮🇳 India</button>
+          <button class="filter-pill" data-filter="asia-pacific">🌏 Asia-Pacific</button>
+          <button class="filter-pill" data-filter="europe-med">🏛️ Europe &amp; Med</button>
+          <button class="filter-pill" data-filter="americas">🌎 Americas</button>
+          <button class="filter-pill" data-filter="africa-me">🌍 Africa &amp; ME</button>
           <button class="filter-pill" data-filter="safe">🟢 Safe to Swim</button>
           <button class="filter-pill" data-filter="popular">⭐ Popular Spots</button>
           <button class="filter-pill" data-filter="near_me">📍 Near Me (&lt;50 km)</button>
           <button class="filter-pill" data-filter="watersports">🏄 Surfing / Watersports</button>
         </nav>
 
-        <!-- Map Section with 3D Driving Perspective Capability -->
-        <main id="map-wrapper" class="map-container-wrapper">
-          <div id="vintage-map"></div>
+        <!-- Map Section with 3D Globe & 2D Driving Perspective Capability -->
+        <main id="map-wrapper" class="map-container-wrapper view-3d-globe">
+          <div id="globe-3d-container" class="globe-viewport active"></div>
+          <div id="vintage-map" style="display: none;"></div>
           <div class="map-vignette"></div>
+
+          <!-- Projection Switcher / View Toggle Button -->
+          <button type="button" id="btn-toggle-globe-view" class="globe-projection-toggle" title="Switch between 3D Interactive Globe and 2D Road Map">
+            <span class="toggle-icon">🗺️</span>
+            <span class="toggle-text">2D Road Map</span>
+          </button>
 
           <!-- Top Floating GPS Navigation Pill -->
           <div id="floating-gps-pill" class="floating-gps-pill">
@@ -451,6 +463,7 @@
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
               <h2 id="sheet-beach-name" class="sheet-title" style="margin: 0;">Marina Beach</h2>
               <span id="sheet-category-badge" class="sheet-category-pill">🏖️ Urban Promenade</span>
+              <span id="detail-source-badge" class="source-badge incois">🏛️ INCOIS Certified</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
               <p id="sheet-beach-state" class="sheet-subtitle" style="margin: 0;">Tamil Nadu · Bay of Bengal</p>

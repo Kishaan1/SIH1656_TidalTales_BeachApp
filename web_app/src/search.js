@@ -53,6 +53,8 @@ export function fuzzySearchBeaches(query, beaches, userLocation, maxResults = 5)
   beaches.forEach(beach => {
     const nameLower = beach.name.toLowerCase();
     const stateLower = (beach.state || '').toLowerCase();
+    const countryLower = (beach.country || '').toLowerCase();
+    const regionLower = (beach.region || '').toLowerCase();
     const descLower = (beach.description || '').toLowerCase();
 
     // Derive city/district from beach metadata or known patterns
@@ -80,10 +82,18 @@ export function fuzzySearchBeaches(query, beaches, userLocation, maxResults = 5)
       score += 60;
       matchType = 'city';
       matchedField = 'city';
+    } else if (countryLower.includes(cleanQ)) {
+      score += 55;
+      matchType = 'country';
+      matchedField = 'country';
     } else if (stateLower.includes(cleanQ)) {
       score += 50;
       matchType = 'state';
       matchedField = 'state';
+    } else if (regionLower.includes(cleanQ)) {
+      score += 45;
+      matchType = 'region';
+      matchedField = 'region';
     } else if (descLower.includes(cleanQ)) {
       score += 30;
       matchType = 'description';
@@ -102,6 +112,11 @@ export function fuzzySearchBeaches(query, beaches, userLocation, maxResults = 5)
       if (cityLower) {
         const cityDist = levenshteinDistance(cleanQ, cityLower);
         if (cityDist < bestDist) bestDist = cityDist;
+      }
+
+      if (countryLower) {
+        const countryDist = levenshteinDistance(cleanQ, countryLower);
+        if (countryDist < bestDist) bestDist = countryDist;
       }
 
       const maxAllowedDist = cleanQ.length <= 4 ? 1 : 2;

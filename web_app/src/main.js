@@ -36,6 +36,8 @@ import {
   clearSystemTileCache,
   calculateStorageUsageMB,
 } from './settings.js';
+import { initGlobe, flyToBeach, updateGlobeData, resizeGlobe } from './globe.js';
+import { getBeachTelemetry } from './marineTelemetry.js';
 
 // Application State
 let beaches = JSON.parse(JSON.stringify(INITIAL_BEACHES));
@@ -43,6 +45,8 @@ let userLocation = { lat: 13.0827, lon: 80.2707, city: 'Chennai' }; // Coastal C
 let selectedBeachId = beaches[0].id;
 let currentFilter = 'all';
 let map = null;
+let globeInstance = null;
+let currentProjectionView = '3d'; // '3d' or '2d'
 let markers = {};
 let currentUser = null;
 
@@ -194,10 +198,12 @@ function initMapAndDashboard() {
       setTimeout(() => map.invalidateSize(true), 100);
       setTimeout(() => map.invalidateSize(true), 350);
     }
+    resizeGlobe();
     return;
   }
   isDashboardInitialized = true;
   initMap();
+  initGlobeView();
   renderPolaroidCarousel();
   initSimulator();
   initAlertSystem();
@@ -901,6 +907,73 @@ function initMap() {
   updateGpsTelemetry();
 }
 
+/**
+ * Initialize the 3D Interactive Rotating Globe and Projection Switcher
+ */
+function initGlobeView() {
+  const globeContainer = document.getElementById('globe-3d-container');
+  if (globeContainer) {
+    globeInstance = initGlobe(globeContainer, getFilteredBeaches(), (beachId) => {
+      selectBeach(beachId);
+      openBottomSheet();
+    });
+  }
+
+  const toggleBtn = document.getElementById('btn-toggle-globe-view');
+  toggleBtn?.addEventListener('click', () => {
+    setProjectionView(currentProjectionView === '3d' ? '2d' : '3d');
+  });
+}
+
+function setProjectionView(mode) {
+  currentProjectionView = mode;
+  const globeContainer = document.getElementById('globe-3d-container');
+  const mapElement = document.getElementById('vintage-map');
+  const toggleBtn = document.getElementById('btn-toggle-globe-view');
+  const mapWrapper = document.getElementById('map-wrapper');
+
+  if (mode === '3d') {
+    if (globeContainer) {
+      globeContainer.style.display = 'block';
+      globeContainer.classList.add('active');
+    }
+    if (mapElement) {
+      mapElement.style.display = 'none';
+      mapElement.classList.remove('active');
+    }
+    if (mapWrapper) {
+      mapWrapper.classList.add('view-3d-globe');
+      mapWrapper.classList.remove('view-2d-map');
+    }
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<span class="toggle-icon">🗺️</span> <span class="toggle-text">2D Road Map</span>';
+      toggleBtn.title = 'Switch to 2D Road Map';
+    }
+    resizeGlobe();
+  } else {
+    if (globeContainer) {
+      globeContainer.style.display = 'none';
+      globeContainer.classList.remove('active');
+    }
+    if (mapElement) {
+      mapElement.style.display = 'block';
+      mapElement.classList.add('active');
+    }
+    if (mapWrapper) {
+      mapWrapper.classList.remove('view-3d-globe');
+      mapWrapper.classList.add('view-2d-map');
+    }
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<span class="toggle-icon">🌐</span> <span class="toggle-text">3D Globe</span>';
+      toggleBtn.title = 'Switch to 3D Interactive Globe';
+    }
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 60);
+      setTimeout(() => map.invalidateSize(), 250);
+    }
+  }
+}
+
 function createSafetyBuoyIcon(status) {
   const statusClass = status === SuitabilityStatus.SAFE
     ? 'buoy-safe'
@@ -931,6 +1004,12 @@ function createSafetyBuoyIcon(status) {
 function getFilteredBeaches() {
   return beaches.filter(beach => {
     if (currentFilter === 'all') return true;
+    if (currentFilter === 'india') return beach.region === 'india' || beach.country === 'India';
+    if (currentFilter === 'asia-pacific') return beach.region === 'asia-pacific';
+    if (currentFilter === 'europe-med') return beach.region === 'europe-med';
+    if (currentFilter === 'americas') return beach.region === 'americas';
+    if (currentFilter === 'africa-me') return beach.region === 'africa-me';
+
     const result = evaluateSuitability(beach.reading);
     if (currentFilter === 'safe' || currentFilter === 'Safe to Swim') {
       return result.score >= 75 || result.status === SuitabilityStatus.SAFE;
@@ -938,7 +1017,8 @@ function getFilteredBeaches() {
     if (currentFilter === 'popular') {
       const name = beach.name.toLowerCase();
       return (beach.reviewsCount && beach.reviewsCount >= 1400) ||
-        name.includes('marina') || name.includes('calangute') || name.includes('kovalam') || name.includes('puri') || name.includes('juhu');
+        name.includes('marina') || name.includes('calangute') || name.includes('kovalam') || name.includes('puri') || name.includes('juhu') ||
+        name.includes('copacabana') || name.includes('waikiki') || name.includes('kuta') || name.includes('santorini');
     }
     if (currentFilter === 'near_me') {
       const dist = haversineDistanceKm(userLocation.lat, userLocation.lon, beach.latitude, beach.longitude);
@@ -946,12 +1026,12 @@ function getFilteredBeaches() {
     }
     if (currentFilter === 'watersports') {
       const name = beach.name.toLowerCase();
-      return name.includes('calangute') || name.includes('varkala') || name.includes('kovalam') || name.includes('marina') ||
+      return name.includes('calangute') || name.includes('varkala') || name.includes('kovalam') || name.includes('marina') || name.includes('gold coast') || name.includes('waikiki') ||
         (beach.category && beach.category.toLowerCase().includes('watersport'));
     }
     if (currentFilter === 'Caution Advised') return result.status === SuitabilityStatus.MODERATE;
     if (currentFilter === 'Hazardous') return result.status === SuitabilityStatus.UNSAFE;
-    return beach.state.toLowerCase().includes(currentFilter.toLowerCase());
+    return (beach.state || '').toLowerCase().includes(currentFilter.toLowerCase()) || (beach.country || '').toLowerCase().includes(currentFilter.toLowerCase());
   });
 }
 
@@ -975,7 +1055,7 @@ function renderSafetyBuoyMarkers() {
           <span style="font-size:11px; color:${result.statusColor}; font-weight:700;">
             ● ${result.status} (${result.score}/100)
           </span><br/>
-          <span style="font-size:10px; color:#6B5E55;">${beach.state} · ${result.windKnots} kts</span>
+          <span style="font-size:10px; color:#6B5E55;">${beach.state ? beach.state + ', ' : ''}${beach.country || 'India'} · ${result.windKnots} kts</span>
         </div>
       `);
 
@@ -1073,7 +1153,7 @@ function renderPolaroidCarousel() {
         <div class="polaroid-beach-name">${beach.name}</div>
         <div class="polaroid-location">
           <span>📍</span>
-          <span>${beach.state} · ${dist} km</span>
+          <span>${beach.state ? beach.state + ', ' : ''}${beach.country || 'India'} · ${dist} km</span>
         </div>
         <div class="polaroid-scores-preview">
           <span>🌊 ${beach.reading.waveHeightM}m</span>
@@ -1097,6 +1177,9 @@ function selectBeach(id) {
   const beach = beaches.find(b => b.id === id);
   if (!beach) return;
 
+  // 3D Globe camera flight and pulsing ring
+  flyToBeach(beach);
+
   if (map && !isNavigating) {
     map.flyTo([beach.latitude, beach.longitude], 12, { duration: 1.2 });
     if (markers[id]) markers[id].openPopup();
@@ -1111,6 +1194,18 @@ function selectBeach(id) {
 
   updateBottomSheetContent(beach);
   syncSimulatorInputs(beach);
+
+  // Live oceanic telemetry fetch (certified INCOIS or global Open-Meteo)
+  getBeachTelemetry(beach)
+    .then(telemetry => {
+      if (telemetry) {
+        beach.reading = { ...beach.reading, ...telemetry };
+        if (telemetry.source) beach.source = telemetry.source;
+        updateBottomSheetContent(beach);
+        updateGlobeData(getFilteredBeaches(), beach);
+      }
+    })
+    .catch(err => console.warn('[TELEMETRY] Live fetch:', err));
 }
 
 function openBottomSheet() {
@@ -1251,8 +1346,18 @@ function updateBottomSheetContent(beach) {
   if (geminiOutput) geminiOutput.innerHTML = '';
 
   document.getElementById('sheet-beach-name').textContent = beach.name;
-  document.getElementById('sheet-beach-state').textContent = `${beach.state} · Bay of Bengal / Arabian Sea`;
+  const stateText = beach.country === 'India'
+    ? `${beach.state} · Bay of Bengal / Arabian Sea`
+    : `${beach.state ? beach.state + ' · ' : ''}${beach.country || 'International Coast'}`;
+  document.getElementById('sheet-beach-state').textContent = stateText;
   document.getElementById('sheet-beach-description').textContent = beach.description || '';
+
+  const sourceBadgeEl = document.getElementById('detail-source-badge');
+  if (sourceBadgeEl) {
+    const isIndia = beach.region === 'india' || beach.source === 'INCOIS Certified';
+    sourceBadgeEl.className = `source-badge ${isIndia ? 'incois' : 'global'}`;
+    sourceBadgeEl.textContent = isIndia ? '🏛️ INCOIS Certified' : '🌐 Global Oceanic Grid';
+  }
 
   // Enhanced Place Card Header: Category, Ratings, GPS Distance
   const catEl = document.getElementById('sheet-category-badge');
@@ -1618,6 +1723,12 @@ async function startTurnByTurnNavigation(beachId, mode = TravelMode.DRIVING) {
   document.getElementById('beach-cards-strip').classList.add('nav-hidden');
   document.getElementById('floating-gps-pill').style.display = 'none';
 
+  const globeToggleBtn = document.getElementById('btn-toggle-globe-view');
+  if (globeToggleBtn) globeToggleBtn.style.display = 'none';
+  if (currentProjectionView === '3d') {
+    setProjectionView('2d');
+  }
+
   const mapWrapper = document.getElementById('map-wrapper');
   const isDesktop = window.innerWidth >= 1024;
   if (isDesktop) {
@@ -1872,6 +1983,8 @@ function endTurnByTurnNavigation(arrived = false) {
   document.getElementById('search-omnibox-wrapper')?.classList.remove('nav-hidden');
   document.getElementById('beach-cards-strip').classList.remove('nav-hidden');
   document.getElementById('floating-gps-pill').style.display = '';
+  const globeToggleBtn = document.getElementById('btn-toggle-globe-view');
+  if (globeToggleBtn) globeToggleBtn.style.display = 'flex';
   document.getElementById('home-dashboard')?.classList.remove('nav-active');
   document.body.classList.remove('nav-active');
   toggleNavConfigDrawer(false);
@@ -2116,7 +2229,7 @@ function renderAutocompleteResults(query) {
         <span class="suggestion-icon">🏖️</span>
         <div class="suggestion-info">
           <div class="suggestion-title">${highlightMatchText(beach.name, query)}</div>
-          <div class="suggestion-sub">${beach.state} · 📍 ${distKm.toFixed(1)} km away</div>
+          <div class="suggestion-sub">${beach.state ? beach.state + ', ' : ''}${beach.country || 'India'} · 📍 ${distKm.toFixed(1)} km away</div>
         </div>
       </div>
       <div class="suggestion-status-pill" style="background-color: ${suitability.statusColor};">
@@ -2175,7 +2288,7 @@ function renderRecentSearchesDropdown() {
         <span class="suggestion-icon">🕒</span>
         <div class="suggestion-info">
           <div class="suggestion-title">${beach.name}</div>
-          <div class="suggestion-sub">${beach.state} · 📍 ${distKm.toFixed(1)} km away</div>
+          <div class="suggestion-sub">${beach.state ? beach.state + ', ' : ''}${beach.country || 'India'} · 📍 ${distKm.toFixed(1)} km away</div>
         </div>
       </div>
       <div class="suggestion-status-pill" style="background-color: ${suitability.statusColor};">
@@ -2458,6 +2571,7 @@ function initSimulator() {
     renderPolaroidCarousel();
     updateBottomSheetContent(currentBeach);
     updateTopAlertBanner();
+    updateGlobeData(getFilteredBeaches(), currentBeach);
   }
 
   waveSlider?.addEventListener('input', onParamChange);
@@ -2483,6 +2597,7 @@ function initSimulator() {
     renderPolaroidCarousel();
     updateBottomSheetContent(currentBeach);
     updateTopAlertBanner();
+    updateGlobeData(getFilteredBeaches(), currentBeach);
   }
 
   document.getElementById('toggle-tsunami')?.addEventListener('click', () =>
@@ -2565,6 +2680,7 @@ function initFilters() {
       currentFilter = pill.getAttribute('data-filter');
       renderPolaroidCarousel();
       renderSafetyBuoyMarkers();
+      updateGlobeData(getFilteredBeaches(), beaches.find(b => b.id === selectedBeachId));
     });
   });
 

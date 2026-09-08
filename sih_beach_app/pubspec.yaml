@@ -1,0 +1,51 @@
+name: tidal_tales
+description: "Real-time beach recreational suitability app — SIH1656"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.0
+  riverpod_annotation: ^2.6.0
+
+  # Location & Maps
+  geolocator: ^13.0.0
+  google_maps_flutter: ^2.9.0
+
+  # Networking
+  dio: ^5.7.0
+
+  # Notifications & background
+  flutter_local_notifications: ^18.0.0
+  flutter_background_service: ^5.1.0
+
+  # UI polish
+  google_fonts: ^6.2.0
+  cached_network_image: ^3.4.0
+  shimmer: ^3.0.0
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  riverpod_generator: ^2.6.0
+  build_runner: ^2.4.0
+  flutter_lints: ^5.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/map_style/
+    - assets/images/
+  fonts:
+    - family: Pacifico
+      fonts:
+        - asset: assets/fonts/Pacifico-Regular.ttf

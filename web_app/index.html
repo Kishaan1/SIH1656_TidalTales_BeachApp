@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tidal Tales — Beach Recreational Suitability & In-App Navigation (SIH1656)</title>
+  <meta name="description" content="Real-time recreational safety ratings and in-app turn-by-turn navigation for Indian beaches powered by INCOIS oceanographic data and Google Gemini AI." />
+  
+  <!-- Fonts: Space Mono (nautical stamp), Pacifico (retro display), Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pacifico&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+  <div class="app-viewport-wrapper">
+    <!-- Desktop Top Bar Controls -->
+    <div class="top-bar-controls">
+      <span>🏖️ <strong>SIH1656</strong> — Tidal Tales</span>
+      <div style="display: flex; gap: 8px;">
+        <button id="toggle-sandbox-btn" class="top-action-btn">
+          ⚡ INCOIS Simulator
+        </button>
+        <button id="header-auth-gate-btn" class="top-action-btn">
+          🔒 Auth State: <span id="top-auth-status">Logged Out</span>
+        </button>
+        <button id="toggle-frame-btn" class="top-action-btn" title="Toggle between Responsive Fullscreen and Simulated Phone Frame">
+          📱 Toggle Mobile Preview
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Device Frame Container -->
+    <div id="device-frame" class="mobile-device-frame">
+      
+      <!-- Status Bar -->
+      <div id="device-status-bar" class="device-status-bar auth-mode">
+        <span id="clock-display">09:41</span>
+        <div class="notch-pill"></div>
+        <div class="status-icons">
+          <span>5G</span>
+          <span>●●●</span>
+          <span>100%</span>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SCREEN 1: CINEMATIC 16MM AUTHENTICATION (DEFAULT INITIAL GATE)
+           ================================================================ -->
+      <section id="auth-screen" class="auth-screen-container auth-wrapper">
+        <div class="cinematic-backdrop-wrapper">
+          <canvas id="coastal-ambient-canvas"></canvas>
+          <div class="cinematic-scrim"></div>
+          <div class="film-grain-overlay"></div>
+        </div>
+
+        <div class="auth-hero-branding auth-header">
+          <div class="hero-shell-emblem brand-logo" id="auth-hero-logo" style="cursor: pointer;" title="Tidal Tales">🐚</div>
+          <h1 id="auth-hero-title" style="cursor: pointer; user-select: none;" title="Triple-tap for secret owner access">Tidal Tales</h1>
+          <p>Indian Coastlines &amp; Recreational Tides</p>
+        </div>
+
+        <div class="auth-card-sheet">
+          <div class="rubber-stamp-toggle">
+            <button id="tab-sign-in" class="stamp-tab-btn active">Sign In</button>
+            <button id="tab-sign-up" class="stamp-tab-btn">New Explorer</button>
+          </div>
+
+          <!-- SIGN IN FORM VIEW (DECOUPLED 2-STEP FLOW) -->
+          <div id="sign-in-flow" class="auth-form-view active">
+            
+            <!-- Step 1: Identity Entry -->
+            <div id="identity-step" class="auth-step-container active">
+              <form id="sign-in-identity-form" onsubmit="return false;">
+                <div class="form-field-group">
+                  <label class="form-field-label">Coastal Handle (Email or Mobile Port)</label>
+                  <div class="input-ink-wrapper">
+                    <input 
+                      type="text" 
+                      id="signin-email" 
+                      class="form-input" 
+                      placeholder="e.g. owner@tidaltales.in or +91..." 
+                      autocomplete="username" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <button type="button" id="btn-continue-passcode" class="nautical-cta-btn">
+                  <span class="btn-text-label">Continue to Passcode →</span>
+                  <span class="compass-icon-loading">🧭</span>
+                </button>
+
+                <div class="auth-helper-row">
+                  <a href="#" id="forgot-compass-link" class="compass-reset-link">Lost your compass? (Reset)</a>
+                  <span id="quick-guest-btn" class="guest-dock-link">Enter as Guest / Demo Pass →</span>
+                </div>
+              </form>
+            </div>
+
+            <!-- Step 2: Dedicated PIN / Compass Passcode Screen -->
+            <div id="passcode-step" class="auth-step-container hidden">
+              <div class="passcode-header">
+                <span class="lock-icon">🔒</span>
+                <h3 class="auth-title">Enter Compass Passcode</h3>
+                <p class="auth-subtitle">
+                  Confirm private PIN for <strong id="display-user-id">owner@tidaltales.in</strong>
+                </p>
+              </div>
+
+              <div class="pin-input-matrix" id="pin-matrix">
+                <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin-0" autocomplete="off" />
+                <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin-1" autocomplete="off" />
+                <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin-2" autocomplete="off" />
+                <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" id="pin-3" autocomplete="off" />
+              </div>
+
+              <div class="passcode-hint-text">
+                <span>Default test PIN: <strong>2026</strong> (Owner) or any 4 digits</span>
+              </div>
+
+              <button type="button" id="btn-submit-passcode" class="nautical-cta-btn btn-step-ashore">
+                <span class="btn-text-label">Step Ashore &amp; Unlock Shoreline</span>
+                <span class="compass-icon-loading">🧭</span>
+              </button>
+
+              <div style="text-align: center; margin-top: 10px;">
+                <button type="button" id="btn-back-identity" class="btn-text-link">
+                  ← Change Email or Mobile
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- SIGN UP FORM VIEW -->
+          <form id="sign-up-form" class="auth-form-view" onsubmit="return false;">
+            <div class="form-field-group">
+              <label class="form-field-label">What should the coast call you?</label>
+              <div class="input-ink-wrapper">
+                <input type="text" id="signup-name" class="form-input" placeholder="e.g. Captain Ananya" required />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Where should we send coastal alerts?</label>
+              <div class="input-ink-wrapper">
+                <input type="email" id="signup-email" class="form-input" placeholder="ananya@coastline.in" required />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label">Create Secret Password</label>
+              <div class="input-ink-wrapper">
+                <input type="password" id="signup-password" class="form-input" placeholder="At least 8 coastal chars" required />
+                <button type="button" id="signup-pwd-toggle" class="password-toggle-btn">Peek</button>
+              </div>
+
+              <!-- 4-Tier Tide-Gauge Strength Meter -->
+              <div class="tide-gauge-container">
+                <div class="tide-gauge-header">
+                  <span>Tide Strength</span>
+                  <span id="tide-gauge-text" class="tide-gauge-label">Low Tide</span>
+                </div>
+                <div class="tide-gauge-bars">
+                  <div id="tide-bar-1" class="tide-bar"></div>
+                  <div id="tide-bar-2" class="tide-bar"></div>
+                  <div id="tide-bar-3" class="tide-bar"></div>
+                  <div id="tide-bar-4" class="tide-bar"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="location-disclosure-badge">
+              <span>📍</span>
+              <span>Enables instant INCOIS surge warnings &amp; nearest beach ratings when on the sand.</span>
+            </div>
+
+            <button type="submit" id="btn-claim-spot" class="nautical-cta-btn">
+              <span class="btn-text-label">Claim Your Spot on the Sand</span>
+              <span class="compass-icon-loading">🧭</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           SCREEN 2 & 3: HOME DASHBOARD (HIDDEN UNTIL AUTHENTICATED)
+           ================================================================ -->
+      <div id="home-dashboard" class="home-dashboard-container dashboard-wrapper hidden" style="display: none !important;">
+        
+        <!-- Top Sliding Alert Banner in Brick Red (#C4574B) -->
+        <div id="top-alert-banner" class="top-alert-banner" data-testid="alert-banner" style="display: none;">
+          <div class="top-alert-content">
+            <span class="top-alert-pulse">🚨</span>
+            <strong id="top-alert-text">INCOIS High Wave Warning in effect along eastern coast!</strong>
+          </div>
+          <button id="close-top-banner-btn" style="background:none; border:none; color:#fff; cursor:pointer; font-size:14px;">✕</button>
+        </div>
+
+        <!-- App Header -->
+        <header id="main-app-header" class="app-header">
+          <div class="app-title-group">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h1>Tidal Tales</h1>
+              <span id="owner-badge" class="owner-pass-badge" style="display: none;">[OWNER TEST PASS]</span>
+            </div>
+            <p id="user-greeting-text">Your beach day, checked in advance ☀️</p>
+          </div>
+          <div class="header-actions">
+            <button id="open-gemini-header-btn" class="icon-button" title="Ask Gemini Coastal AI">
+              ✨
+            </button>
+            <button id="open-sandbox-icon" class="icon-button" title="INCOIS Simulation Sandbox">
+              🎛️
+            </button>
+            <button id="alert-bell-btn" class="icon-button" title="Hazard Notifications">
+              🔔
+              <span id="alert-indicator-dot" class="alert-dot"></span>
+            </button>
+            <button id="open-settings-btn" class="icon-button" title="Settings &amp; Preferences">
+              ⚙️
+            </button>
+            <button id="btn-sign-out" class="icon-button" title="Sign Out / Switch Explorer">
+              🚪
+            </button>
+          </div>
+        </header>
+
+        <!-- Floating Omnibox Search Bar UI -->
+        <div class="search-omnibox-wrapper" id="search-omnibox-wrapper">
+          <div class="search-input-box">
+            <span class="search-lens-icon">🔍</span>
+            <input
+              type="text"
+              id="coastal-search-input"
+              class="coastal-search-input"
+              placeholder="Search beach, district, or coastal zone..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" id="btn-search-clear" class="search-clear-btn" style="display: none;" title="Clear search input">✕</button>
+            <button type="button" id="btn-search-voice" class="search-voice-btn" title="Voice Search (Speak beach or city name)">🎙️</button>
+          </div>
+
+          <!-- Autocomplete Suggestions Dropdown & Recent Search History -->
+          <div id="search-suggestions-dropdown" class="search-suggestions-dropdown" style="display: none;">
+            <!-- Dynamically populated: recent search history or top 5 fuzzy matched beaches -->
+          </div>
+        </div>
+
+        <!-- Quick Category Filter Chips -->
+        <nav id="main-filter-toolbar" class="filter-toolbar" aria-label="Quick Category Filter Chips">
+          <button class="filter-pill active" data-filter="all">🏖️ All Coastlines</button>
+          <button class="filter-pill" data-filter="safe">🟢 Safe to Swim</button>
+          <button class="filter-pill" data-filter="popular">⭐ Popular Spots</button>
+          <button class="filter-pill" data-filter="near_me">📍 Near Me (&lt;50 km)</button>
+          <button class="filter-pill" data-filter="watersports">🏄 Surfing / Watersports</button>
+        </nav>
+
+        <!-- Map Section with 3D Driving Perspective Capability -->
+        <main id="map-wrapper" class="map-container-wrapper">
+          <div id="vintage-map"></div>
+          <div class="map-vignette"></div>
+
+          <!-- Top Floating GPS Navigation Pill -->
+          <div id="floating-gps-pill" class="floating-gps-pill">
+            <div class="gps-telemetry-left">
+              <span class="gps-pin-icon">📍</span>
+              <div>
+                <div id="gps-coords" class="gps-coordinates-text">13.08° N, 80.28° E · Chennai</div>
+                <div id="gps-nearest-name" class="gps-nearest-beach">Nearest: Marina Beach (3.9 km)</div>
+              </div>
+            </div>
+            <button id="btn-recenter" class="gps-locate-btn">Recenter</button>
+          </div>
+
+          <!-- HEADS-UP MANEUVER CARD (HUD) FOR TURN-BY-TURN NAVIGATION -->
+          <div id="nav-hud-banner" class="nav-hud-banner">
+            <div id="nav-hud-icon" class="nav-hud-arrow-box">⬆️</div>
+            <div class="nav-hud-instruction-wrap">
+              <div id="nav-hud-street" class="nav-hud-street">East Coast Highway (ECR)</div>
+              <div class="nav-hud-subtext">
+                <span id="nav-hud-distance">IN 450M // CONTINUE STRAIGHT</span>
+                <span class="gps-live-dot" title="Live GPS Lock"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Navigation Control Stack -->
+          <div id="nav-controls-stack" class="nav-controls-stack">
+            <button id="nav-btn-recenter" class="nav-float-btn" title="Recenter on Vehicle Compass Puck">
+              🧭
+            </button>
+            <button id="nav-btn-voice" class="nav-float-btn" title="Toggle Spoken Turn Guidance">
+              🔊
+            </button>
+            <button id="nav-btn-hazard" class="nav-float-btn" title="Toggle Coastal Hazard Surge Zones">
+              ⚠️
+            </button>
+            <button id="nav-btn-sim-speed" class="nav-float-btn" title="Simulation Speed (1x / 2x / 5x)">
+              ⚡
+            </button>
+          </div>
+        </main>
+
+        <!-- Desktop Turn-by-Turn Directions Sidebar (Visible on Desktop Navigation) -->
+        <aside id="desktop-directions-sidebar" class="desktop-directions-sidebar" style="display: none;">
+          <div class="directions-sidebar-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 id="sidebar-route-title" style="font-size: 15px; font-weight: 700; color: var(--driftwood-ink); margin: 0;">Turn-by-Turn Route</h3>
+              <span id="sidebar-route-tag" class="route-alt-tag">⚡ FASTEST</span>
+            </div>
+            <p id="sidebar-dest-summary" style="font-size: 11px; color: var(--muted-slate); margin-top: 4px;">
+              To Marina Beach · 14 min (5.8 km)
+            </p>
+          </div>
+          <div id="desktop-turns-list" class="desktop-turns-list">
+            <!-- Dynamically populated maneuver cards -->
+          </div>
+        </aside>
+
+        <!-- Bottom Polaroid Cards Carousel Strip -->
+        <section id="beach-cards-strip" class="beach-cards-strip-container">
+          <div class="strip-header">
+            <span class="strip-title">Nearby Coastal Spots</span>
+            <span id="beach-counter" class="strip-counter">7 spots available</span>
+          </div>
+          <div id="polaroid-carousel" class="polaroid-carousel">
+            <!-- Dynamically populated Polaroid cards -->
+          </div>
+        </section>
+
+        <!-- BOTTOM TRIP TELEMETRY CARD FOR IN-APP NAVIGATION -->
+        <div id="nav-bottom-telemetry" class="nav-bottom-telemetry bottom-nav-card" role="region" aria-label="Trip Telemetry Bar">
+          
+          <!-- Expand / Minimize Pull Handle Bar -->
+          <div id="btn-toggle-nav-details" class="nav-dock-handle-bar" role="button" aria-expanded="false" title="Toggle route configuration options" tabindex="0">
+            <span class="nav-dock-handle-pill"></span>
+            <div class="nav-dock-toggle-label">
+              <span id="nav-dock-chevron" class="nav-dock-chevron">▲</span>
+              <span id="nav-dock-toggle-text" class="nav-dock-toggle-text">Route Options</span>
+            </div>
+          </div>
+
+          <!-- Pre-Trip Configuration Drawer (Mode tabs, route comparison, toll checkboxes) -->
+          <div id="nav-config-drawer" class="nav-config-drawer collapsed">
+            <!-- Mode Selector (Multi-Modal: Car, Two-Wheeler, Bicycle, Walking) -->
+            <div class="nav-mode-selector transport-mode-selector">
+              <button id="mode-driving" class="nav-mode-btn active" data-mode="driving">🚗 Driving</button>
+              <button id="mode-bike" class="nav-mode-btn" data-mode="bike">🛵 Two-Wheeler</button>
+              <button id="mode-bicycle" class="nav-mode-btn" data-mode="bicycle">🚲 Bicycle</button>
+              <button id="mode-walking" class="nav-mode-btn" data-mode="walking">🚶 Walking</button>
+            </div>
+
+            <!-- Selectable Multi-Criteria Alternative Routes Picker -->
+            <div id="nav-routes-picker" class="nav-routes-picker route-options-grid">
+              <div id="route-card-fastest" class="route-alt-card active" data-criterion="fastest" title="Fastest route via coastal expressway">
+                <span class="route-alt-tag">⚡ FASTEST</span>
+                <div class="route-alt-time" id="alt-time-fastest">14 min</div>
+                <div class="route-alt-dist" id="alt-dist-fastest">5.8 km</div>
+              </div>
+              <div id="route-card-shortest" class="route-alt-card" data-criterion="shortest" title="Shortest physical distance via city grid">
+                <span class="route-alt-tag">📏 SHORTEST</span>
+                <div class="route-alt-time" id="alt-time-shortest">18 min</div>
+                <div class="route-alt-dist" id="alt-dist-shortest">4.9 km</div>
+              </div>
+              <div id="route-card-scenic" class="route-alt-card" data-criterion="scenic" title="Scenic coastal route with ocean views">
+                <span class="route-alt-tag">🌿 SCENIC</span>
+                <div class="route-alt-time" id="alt-time-scenic">16 min</div>
+                <div class="route-alt-dist" id="alt-dist-scenic">6.5 km</div>
+              </div>
+            </div>
+
+            <!-- Route Avoidance Filter Checkboxes -->
+            <div class="nav-filters-bar route-filter-toggles">
+              <label class="filter-check-label" title="Avoid toll collection checkpoints">
+                <input type="checkbox" id="nav-avoid-tolls" />
+                <span>Avoid Tolls</span>
+              </label>
+              <label class="filter-check-label" title="Prefer local roads over high-speed expressways">
+                <input type="checkbox" id="nav-avoid-highways" />
+                <span>Avoid Highways</span>
+              </label>
+              <label class="filter-check-label" title="Exclude ferry river/inlet crossings">
+                <input type="checkbox" id="nav-avoid-ferries" checked />
+                <span>Avoid Ferries</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Single Slim Telemetry Row for Active Navigation -->
+          <div class="nav-telemetry-row telemetry-row">
+            <div class="nav-telemetry-left-col">
+              <div class="nav-metric-box">
+                <div class="nav-eta-line">
+                  <span id="nav-eta-val" class="nav-eta-val">10:42 AM</span>
+                  <span id="nav-gps-indicator" class="nav-gps-indicator" title="Real-time device GPS stream active">
+                    <span class="gps-beacon-dot"></span>
+                    <span class="gps-beacon-label">Live GPS</span>
+                  </span>
+                </div>
+                <div id="nav-duration-dist" class="nav-sub-metric">14 MIN · 5.8 KM REMAINING</div>
+              </div>
+            </div>
+
+            <div class="nav-telemetry-center-col">
+              <div id="nav-dest-badge" class="nav-dest-safety-badge" title="Destination coastal safety status">
+                <span class="badge-dot">●</span>
+                <span id="nav-dest-badge-text">SAFE // 92/100</span>
+              </div>
+            </div>
+
+            <div class="nav-telemetry-right-col">
+              <button id="btn-sim-drive" class="btn-sim-drive test-mode-btn btn-sim-compact" title="Optional demo test simulation">
+                <span>▶️</span> <span id="sim-btn-text" class="sim-btn-text">Demo</span>
+              </button>
+              <button id="btn-end-nav" class="btn-end-journey btn-end-journey-compact" title="End navigation and return to map">
+                End Journey
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert Notification Toast Replicating AlertService (Scoped inside Home Dashboard) -->
+        <div id="alert-toast" class="alert-toast" style="display: none;">
+          <span class="alert-toast-icon">⚠️</span>
+          <div class="alert-toast-content">
+            <div id="alert-toast-title" class="alert-toast-title">Ocean Hazard Alert</div>
+            <div id="alert-toast-body" class="alert-toast-body">High wave alert issued by INCOIS</div>
+          </div>
+          <button id="close-toast-btn" class="alert-toast-close">✕</button>
+        </div>
+
+      </div>
+
+      <!-- ================================================================
+           BOTTOM SHEET MODAL: BEACH DETAIL, GEMINI AI & OCEAN METRICS
+           ================================================================ -->
+      <div id="sheet-backdrop" class="bottom-sheet-backdrop"></div>
+      <aside id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
+              <h2 id="sheet-beach-name" class="sheet-title" style="margin: 0;">Marina Beach</h2>
+              <span id="sheet-category-badge" class="sheet-category-pill">🏖️ Urban Promenade</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+              <p id="sheet-beach-state" class="sheet-subtitle" style="margin: 0;">Tamil Nadu · Bay of Bengal</p>
+              <span style="color: var(--deckle-border);">·</span>
+              <span id="sheet-rating-stars" class="sheet-rating-pill">★ 4.8</span>
+              <span id="sheet-review-count" style="font-size: 11px; color: var(--muted-slate);">(1,420 Reviews)</span>
+              <span style="color: var(--deckle-border);">·</span>
+              <span id="sheet-gps-dist" style="font-size: 11px; color: var(--vintage-teal); font-weight: 600;">📍 3.9 km</span>
+            </div>
+          </div>
+          <button id="close-sheet-btn" class="sheet-close-btn" aria-label="Close details">✕</button>
+        </div>
+
+        <div id="sheet-suitability-box" class="suitability-box">
+          <div class="suitability-score-row">
+            <div>
+              <div class="nautical-stamp" style="color: var(--muted-slate); margin-bottom: 2px;">
+                Recreational Suitability Index
+              </div>
+              <div id="sheet-score" class="score-number-large">92/100</div>
+            </div>
+            <div id="sheet-status-badge" class="score-status-badge">Safe to Swim</div>
+          </div>
+          <ul id="sheet-reasons" class="reasons-list">
+            <!-- Populated dynamically -->
+          </ul>
+        </div>
+
+        <!-- 4-Card Oceanographic Sub-Scores -->
+        <div class="ocean-metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">🌊 Wave Height (40%)</div>
+            <div id="metric-wave-val" class="metric-val">0.9 m</div>
+            <div id="metric-wave-sub" class="metric-sub">Ideal (&lt;1.2m)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">💨 Wind Speed (20%)</div>
+            <div id="metric-wind-val" class="metric-val">9.7 kts</div>
+            <div id="metric-wind-sub" class="metric-sub">18 km/h · Ideal (&lt;15 kts)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">⏱️ Swell Period (15%)</div>
+            <div id="metric-swell-val" class="metric-val">7.0 s</div>
+            <div id="metric-swell-sub" class="metric-sub">Calm (&lt;12s)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">💧 Water Quality (25%)</div>
+            <div id="metric-water-val" class="metric-val">62 / 100</div>
+            <div id="metric-water-sub" class="metric-sub">Good clarity rating</div>
+          </div>
+        </div>
+
+        <p id="sheet-beach-description" style="font-size: 12px; color: var(--muted-slate); line-height: 1.5; margin-top: 8px;">
+          <!-- Description -->
+        </p>
+
+        <!-- Live Busyness Histogram / Peak Hours Indicator -->
+        <div class="busyness-histogram-card">
+          <div class="busyness-header">
+            <span class="nautical-stamp" style="font-size: 10px; color: var(--driftwood-ink);">👥 Live Crowd &amp; Peak Hours</span>
+            <span id="busyness-current-label" class="busyness-status-pill">Usually not busy</span>
+          </div>
+          <div id="busyness-bars-row" class="busyness-bars-row">
+            <!-- Hourly bars generated dynamically -->
+          </div>
+          <div class="busyness-time-labels">
+            <span>6 AM</span>
+            <span>10 AM</span>
+            <span>2 PM</span>
+            <span>5 PM (Peak)</span>
+            <span>9 PM</span>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             GEMINI AI COASTAL SAFETY ADVISOR CARD
+             ============================================================ -->
+        <div class="gemini-ai-card">
+          <div class="gemini-ai-header">
+            <div class="gemini-title-group">
+              <span class="gemini-sparkle-icon">✨</span>
+              <span class="nautical-stamp" style="color: var(--driftwood-ink);">Tidal AI · Powered by Google Gemini 3.6</span>
+            </div>
+          </div>
+
+          <p style="font-size: 11px; color: var(--muted-slate); margin: 6px 0 10px;">
+            Ask Gemini for an intelligent, real-time safety briefing based on live INCOIS wave, wind, and swell telemetry.
+          </p>
+
+          <!-- Quick Query Prompt Chips -->
+          <div class="gemini-chips-row">
+            <button class="gemini-chip" data-q="Can kids swim safely?">
+              👨‍👩‍👧 Can kids swim safely?
+            </button>
+            <button class="gemini-chip" data-q="Explain rip current risks">
+              🌊 Explain rip current risks
+            </button>
+            <button class="gemini-chip" data-q="Best safe activities today">
+              🏄 Best safe activities today
+            </button>
+          </div>
+
+          <!-- Custom Query Input -->
+          <div class="gemini-input-row" style="margin-top: 8px;">
+            <input type="text" id="gemini-custom-input" class="gemini-text-input" placeholder="Ask custom coastal safety question..." />
+            <button id="btn-ask-gemini" class="gemini-send-btn">Ask AI</button>
+          </div>
+
+          <!-- Response Container (Auto-sizing & scrolling) -->
+          <div id="gemini-response-box" class="gemini-response-box ai-response-box" style="display: none;">
+            <div id="gemini-loading-spinner" class="gemini-loading" style="display: none;">
+              <span>🌊</span> Analyzing live INCOIS ocean telemetry with Gemini AI...
+            </div>
+            <div id="gemini-response-text" class="gemini-text-output"></div>
+          </div>
+        </div>
+
+        <!-- Location Action Buttons Row -->
+        <div class="sheet-actions-row">
+          <button id="btn-start-navigation" class="btn-navigate-beach">
+            🧭 Start Navigation
+          </button>
+          <button type="button" id="btn-share-beach" class="btn-sheet-secondary" title="Share Beach Location Link">
+            📤 Share
+          </button>
+          <button type="button" id="btn-favorite-beach" class="btn-sheet-secondary" title="Save Beach to Favorites">
+            <span id="fav-icon">🤍</span> Favorite
+          </button>
+        </div>
+      </aside>
+
+      <!-- ONBOARDING WELCOME EMAIL MODAL -->
+      <div id="welcome-email-modal" class="email-modal-backdrop">
+        <div class="vintage-letter-card">
+          <button id="close-email-modal-btn" class="letter-close-btn">✕</button>
+          <div class="letter-postmark-stamp">
+            <span>INCOIS</span>
+            <span>SIH1656</span>
+            <span>AIR MAIL</span>
+          </div>
+
+          <div class="letter-header">
+            <h3>🌊 Welcome to Tidal Tales!</h3>
+            <div class="letter-meta-row">
+              <strong>SUBJECT:</strong> Your coastal journal is officially open.
+            </div>
+            <div class="letter-meta-row" style="margin-top: 2px;">
+              <strong>TO:</strong> <span id="email-recipient-name">Explorer</span> &lt;<span id="email-recipient-address">explorer@coastline.in</span>&gt;
+            </div>
+          </div>
+
+          <div class="letter-body">
+            <p>Hi <strong id="email-body-salutation">Explorer</strong>,</p><br>
+            <p>Welcome to <strong>Tidal Tales</strong>! Thanks for signing up—we're thrilled to have you with us.</p><br>
+            <p>Your account is officially ready, meaning you can now log in anytime to discover real-time ocean conditions, explore safe swimming spots, and check INCOIS safety indices before you even step onto the sand.</p><br>
+            <p>Whether you're looking for a peaceful sunset stroll, tracking swell heights, or simply seeking the quietest beach along the coast, your journey starts here.</p><br>
+            <p>Stay tuned for live ocean state updates, seasonal coastal tips, and real-time hazard alerts tailored to keep every beach day safe and serene.</p><br>
+            <p>Ready to see what the tide brought in?</p>
+            
+            <div class="letter-cta-container">
+              <button id="email-action-btn" class="letter-action-btn">
+                [ CLAIM YOUR SPOT ON THE SAND — EXPLORE NOW ]
+              </button>
+            </div>
+
+            <p style="font-size: 12px; color: var(--muted-slate); text-align: center;">
+              Smooth sailing,<br><strong>The Tidal Tales Crew</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- INCOIS SIMULATION SANDBOX DRAWER -->
+      <div id="sandbox-drawer" class="sandbox-drawer">
+        <div class="sandbox-header">
+          <div class="sandbox-title" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>⚡ INCOIS Live Simulator (Judge Controls)</span>
+            <span id="owner-sandbox-unlocked-badge" class="owner-pass-badge" style="display: none; font-size: 9px;">[OWNER OVERRIDE UNLOCKED]</span>
+          </div>
+          <button id="close-sandbox-btn" class="sheet-close-btn">✕</button>
+        </div>
+        <p style="font-size: 11px; color: var(--muted-slate); margin-bottom: 12px;">
+          Adjust oceanographic parameters to test how the suitability scoring algorithm and safety buoy pins react in real-time.
+        </p>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Significant Wave Height (m)</span>
+            <strong id="val-sim-wave">0.9 m</strong>
+          </div>
+          <input type="range" id="slider-wave" class="range-slider" min="0.1" max="4.0" step="0.1" value="0.9">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted-slate);">
+            <span>&lt;0.5m (Calm)</span>
+            <span>&lt;1.2m (Ideal)</span>
+            <span>&gt;2.0m (Hazardous)</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Wind Speed</span>
+            <strong id="val-sim-wind">9.7 kts (18 km/h)</strong>
+          </div>
+          <input type="range" id="slider-wind" class="range-slider" min="2" max="40" step="1" value="10">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted-slate);">
+            <span>&lt;15 kts (Ideal)</span>
+            <span>18 kts (Caution)</span>
+            <span>&gt;25 kts (Gale Chop)</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Swell Period (s)</span>
+            <strong id="val-sim-swell">7 s</strong>
+          </div>
+          <input type="range" id="slider-swell" class="range-slider" min="3" max="18" step="1" value="7">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted-slate);">
+            <span>&lt;12s (Ideal)</span>
+            <span>14s (Caution)</span>
+            <span>&gt;14s (Undertow Risk)</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Water Quality Index</span>
+            <strong id="val-sim-water">62 / 100</strong>
+          </div>
+          <input type="range" id="slider-water" class="range-slider" min="10" max="100" step="5" value="62">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted-slate);">
+            <span>10 (Hazardous)</span>
+            <span>50 (Moderate)</span>
+            <span>100 (Pristine)</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div class="nautical-stamp" style="margin-bottom: 6px; color: var(--driftwood-ink);">
+            ⚠️ Hard Safety Overrides (Forces 0 &amp; Hazardous)
+          </div>
+          <div class="hazard-switches">
+            <button id="toggle-tsunami" class="hazard-btn">🌊 Tsunami Alert</button>
+            <button id="toggle-high-wave" class="hazard-btn">🚨 High Wave Alert</button>
+            <button id="toggle-storm-surge" class="hazard-btn">🌪️ Storm Surge</button>
+            <button id="toggle-current" class="hazard-btn">🌀 Rip Current</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; text-align: right;">
+          <button id="reset-sim-btn" class="filter-pill" style="font-size: 10px;">
+            ↺ Reset Defaults
+          </button>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SETTINGS & PREFERENCES PANEL (CROSS-PLATFORM MODAL / FLYOUT)
+           ================================================================ -->
+      <div id="settings-backdrop" class="settings-backdrop"></div>
+      <aside id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-label="Settings and Preferences">
+        <div class="sheet-handle"></div>
+        <div class="settings-header">
+          <div class="settings-title-group">
+            <span class="settings-header-icon">⚙️</span>
+            <div>
+              <h2 id="settings-modal-title" class="settings-title">Coastal Settings</h2>
+              <p class="settings-subtitle">Identity, Safety Defaults &amp; Offline Storage</p>
+            </div>
+          </div>
+          <button id="close-settings-btn" class="sheet-close-btn" aria-label="Close settings">✕</button>
+        </div>
+
+        <div class="settings-scroll-content">
+          
+          <!-- 1. 👤 Account, Identity & Active Sessions -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">👤</span>
+              <span class="nautical-stamp">1. Account &amp; Active Identity</span>
+            </div>
+            
+            <div class="settings-card profile-card">
+              <div class="profile-card-main">
+                <div id="settings-avatar-badge" class="profile-avatar">O</div>
+                <div class="profile-meta">
+                  <div class="profile-name-row">
+                    <strong id="settings-user-name" class="profile-name">Arun Kumar</strong>
+                    <span id="settings-role-badge" class="owner-pass-badge" style="font-size: 8.5px;">[OWNER TEST PASS]</span>
+                  </div>
+                  <span id="settings-user-email" class="profile-email">owner@tidaltales.in</span>
+                </div>
+              </div>
+
+              <!-- Profile Switcher -->
+              <div class="profile-switcher-row">
+                <span class="settings-sub-label">Switch Active Profile:</span>
+                <div class="profile-switcher-btns">
+                  <button type="button" class="profile-pill-btn active" data-profile="owner" id="btn-profile-owner">🔑 Owner</button>
+                  <button type="button" class="profile-pill-btn" data-profile="registered" id="btn-profile-registered">🏖️ Explorer</button>
+                  <button type="button" class="profile-pill-btn" data-profile="guest" id="btn-profile-guest">🧭 Guest</button>
+                </div>
+              </div>
+
+              <!-- Session Actions -->
+              <div class="settings-actions-group">
+                <div class="settings-row action-row">
+                  <div>
+                    <span class="settings-label">Sign Out (This Device)</span>
+                    <span class="settings-desc">Clears current session token and returns to login gate</span>
+                  </div>
+                  <button type="button" id="btn-settings-signout" class="btn-secondary-action">
+                    Sign Out
+                  </button>
+                </div>
+
+                <div class="settings-row action-row">
+                  <div>
+                    <span class="settings-label">Sign Out All Devices</span>
+                    <span class="settings-desc">Invalidates active sessions across all mobile and desktop browsers</span>
+                  </div>
+                  <button type="button" id="btn-signout-all-devices" class="btn-secondary-action">
+                    Revoke All
+                  </button>
+                </div>
+
+                <div class="settings-row action-row danger-row">
+                  <div>
+                    <span class="settings-label text-danger">Delete / Purge Account</span>
+                    <span class="settings-desc">Permanently wipes saved favorites, cache, and explorer identity</span>
+                  </div>
+                  <button type="button" id="btn-open-delete-modal" class="btn-danger-action">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. 🌊 Coastal Safety & Ocean Alerts -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">🌊</span>
+              <span class="nautical-stamp">2. Coastal Safety &amp; Ocean Alerts</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Critical Hazard Overrides</span>
+                  <span class="settings-desc">High-wave alerts, tsunami warnings, and coastal surge push notifications</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-hazard-alerts" checked>
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Audible Siren on Coastal Proximity</span>
+                  <span class="settings-desc">Play audio chime when GPS coordinates enter a hazardous beach zone</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-proximity-siren" checked>
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row column-layout">
+                <div class="settings-label-row">
+                  <span class="settings-label">Default Suitability Threshold</span>
+                  <span id="label-suitability-threshold" class="settings-value-tag">Moderate (70+)</span>
+                </div>
+                <div class="vintage-segmented-control" id="control-suitability-threshold">
+                  <button type="button" class="segment-btn" data-threshold="strict">Strict (85+)</button>
+                  <button type="button" class="segment-btn active" data-threshold="moderate">Moderate (70+)</button>
+                  <button type="button" class="segment-btn" data-threshold="adventurous">Adventurous (50+)</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. 🧭 Navigation & Routing Defaults -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">🧭</span>
+              <span class="nautical-stamp">3. Navigation &amp; Routing Defaults</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-row column-layout">
+                <div class="settings-label-row">
+                  <span class="settings-label">Default Travel Mode</span>
+                </div>
+                <div class="vintage-segmented-control" id="control-default-mode">
+                  <button type="button" class="segment-btn active" data-mode="driving">🚗 Driving</button>
+                  <button type="button" class="segment-btn" data-mode="bike">🛵 Two-Wheeler</button>
+                  <button type="button" class="segment-btn" data-mode="bicycle">🚲 Cycling</button>
+                  <button type="button" class="segment-btn" data-mode="walking">🚶 Walking</button>
+                </div>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Avoid Tollways</span>
+                  <span class="settings-desc">Prefer routes bypassing toll collection checkpoints</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-nav-tolls">
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Avoid Expressways / Highways</span>
+                  <span class="settings-desc">Favor coastal frontage and local access roads</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-nav-highways">
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Prioritize Scenic Coastal Routes</span>
+                  <span class="settings-desc">Highlight routes featuring ocean vistas and promenade roads</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-nav-scenic" checked>
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Voice Guidance &amp; Audio Turns</span>
+                  <span class="settings-desc">Spoken turn-by-turn alerts during active journey</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-voice-guidance" checked>
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row column-layout">
+                <div class="settings-label-row">
+                  <span class="settings-label">Voice Guidance Volume</span>
+                </div>
+                <div class="vintage-segmented-control compact-segments" id="control-voice-volume">
+                  <button type="button" class="segment-btn" data-volume="muted">🔇 Muted</button>
+                  <button type="button" class="segment-btn active" data-volume="normal">🔉 Normal</button>
+                  <button type="button" class="segment-btn" data-volume="loud">🔊 Loud</button>
+                </div>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Units of Measurement</span>
+                  <span class="settings-desc">Metric (km, m, km/h) vs Nautical / Imperial (miles, ft, knots)</span>
+                </div>
+                <div class="vintage-segmented-control compact-segments" id="control-units">
+                  <button type="button" class="segment-btn active" data-units="metric">Metric (km)</button>
+                  <button type="button" class="segment-btn" data-units="nautical">Nautical (kts)</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. 🌐 Localization & Regional Setup -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">🌐</span>
+              <span class="nautical-stamp">4. Localization &amp; Regional Setup</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Application Language</span>
+                  <span class="settings-desc">Dynamically translates interface headers, navigation and AI alerts</span>
+                </div>
+                <select id="setting-app-language" class="vintage-select">
+                  <option value="en">English (Default)</option>
+                  <option value="ta">தமிழ் (Tamil)</option>
+                  <option value="hi">हिन्दी (Hindi)</option>
+                  <option value="ml">മലയാളം (Malayalam)</option>
+                </select>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Manual Location Fallback</span>
+                  <span class="settings-desc">Default coastal zone used if GPS permission is disabled</span>
+                </div>
+                <select id="setting-home-district" class="vintage-select">
+                  <option value="Chennai, Tamil Nadu">Chennai, Tamil Nadu</option>
+                  <option value="North Goa, Goa">North Goa, Goa</option>
+                  <option value="Thiruvananthapuram, Kerala">Thiruvananthapuram, Kerala</option>
+                  <option value="Puri, Odisha">Puri, Odisha</option>
+                  <option value="Visakhapatnam, Andhra Pradesh">Visakhapatnam, Andhra Pradesh</option>
+                  <option value="Havelock, Andaman &amp; Nicobar">Havelock, Andaman &amp; Nicobar</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5. 🛠️ System Storage & Offline Maintenance -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">🛠️</span>
+              <span class="nautical-stamp">5. Storage &amp; Offline Maintenance</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Clear Map &amp; Tile Cache</span>
+                  <span class="settings-desc" id="storage-cache-subtext">Cached tiles, temporary forecasts (approx. 42.6 MB)</span>
+                </div>
+                <button type="button" id="btn-clear-tile-cache" class="btn-secondary-action">
+                  🧹 Clear Cache
+                </button>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Data Saver Mode</span>
+                  <span class="settings-desc">Disable canvas background waves, reduce map animations and tile bandwidth</span>
+                </div>
+                <label class="vintage-switch">
+                  <input type="checkbox" id="setting-data-saver">
+                  <span class="vintage-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-row">
+                <div>
+                  <span class="settings-label">Reset Recent Search History</span>
+                  <span class="settings-desc">Wipe cached search queries and recent destinations</span>
+                </div>
+                <button type="button" id="btn-reset-search-history" class="btn-secondary-action">
+                  Reset Searches
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 6. 📄 Legal, Support & System Build -->
+          <section class="settings-section">
+            <div class="settings-section-header">
+              <span class="settings-section-icon">📄</span>
+              <span class="nautical-stamp">6. Legal, Support &amp; Build</span>
+            </div>
+
+            <div class="settings-card">
+              <div class="build-info-block">
+                <div class="build-info-row">
+                  <span class="nautical-stamp">Tidal Tales Edition</span>
+                  <span class="build-badge">v2.4.0-coastal</span>
+                </div>
+                <div class="build-info-row">
+                  <span class="nautical-stamp">Build Hash</span>
+                  <span class="build-hash">#SIH-1656-2026.09</span>
+                </div>
+                <div class="build-info-row">
+                  <span class="nautical-stamp">INCOIS Live Feed</span>
+                  <span class="build-status-pill">🟢 Operational</span>
+                </div>
+              </div>
+
+              <div class="legal-links-row">
+                <button type="button" class="legal-link-btn" id="btn-open-tos">Terms of Service</button>
+                <span>·</span>
+                <button type="button" class="legal-link-btn" id="btn-open-privacy">Privacy Policy</button>
+                <span>·</span>
+                <button type="button" class="legal-link-btn" id="btn-open-disclaimers">Ocean Disclaimers</button>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <button type="button" id="btn-open-report-modal" class="nautical-cta-btn secondary-btn" style="padding: 9px 14px; font-size: 11px;">
+                  🚩 Report Beach Hazard / Observation
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </aside>
+
+      <!-- ================================================================
+           SUB-MODAL 1: CONFIRM ACCOUNT DELETION
+           ================================================================ -->
+      <div id="delete-modal-backdrop" class="modal-dialog-backdrop" style="display: none;">
+        <div class="modal-dialog-card danger-card">
+          <div class="modal-dialog-header">
+            <h3 style="color: var(--brick-red); margin: 0; font-size: 18px;">⚠️ Delete Explorer Account?</h3>
+            <button id="close-delete-modal-btn" class="sheet-close-btn">✕</button>
+          </div>
+          <p style="font-size: 12px; color: var(--driftwood-ink); line-height: 1.5; margin: 12px 0;">
+            This will permanently delete your explorer profile, saved beaches, custom INCOIS configurations, and local trip history. This action cannot be undone.
+          </p>
+          <div class="modal-dialog-actions">
+            <button type="button" id="btn-cancel-delete" class="btn-sheet-secondary" style="flex: 1;">Cancel</button>
+            <button type="button" id="btn-confirm-delete" class="btn-danger-action" style="flex: 1; padding: 10px 14px;">Yes, Delete Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SUB-MODAL 2: LEGAL & PRIVACY VIEWER
+           ================================================================ -->
+      <div id="legal-modal-backdrop" class="modal-dialog-backdrop" style="display: none;">
+        <div class="modal-dialog-card legal-card">
+          <div class="modal-dialog-header">
+            <h3 id="legal-modal-title" style="margin: 0; font-size: 18px; color: var(--driftwood-ink);">Terms of Service</h3>
+            <button id="close-legal-modal-btn" class="sheet-close-btn">✕</button>
+          </div>
+          <div id="legal-modal-body" class="legal-modal-body">
+            <!-- Populated dynamically -->
+          </div>
+          <div class="modal-dialog-actions" style="margin-top: 14px; text-align: right;">
+            <button type="button" id="btn-close-legal" class="nautical-cta-btn" style="padding: 8px 18px; font-size: 10px; width: auto; display: inline-flex;">Understood</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SUB-MODAL 3: REPORT BEACH HAZARD / OBSERVATION
+           ================================================================ -->
+      <div id="report-modal-backdrop" class="modal-dialog-backdrop" style="display: none;">
+        <div class="modal-dialog-card report-card">
+          <div class="modal-dialog-header">
+            <h3 style="margin: 0; font-size: 18px; color: var(--driftwood-ink);">🚩 Report Beach Hazard</h3>
+            <button id="close-report-modal-btn" class="sheet-close-btn">✕</button>
+          </div>
+          <form id="report-hazard-form" style="margin-top: 10px;">
+            <div class="form-field-group">
+              <label class="form-field-label">Beach Location</label>
+              <input type="text" id="report-beach-name" class="form-input" value="Marina Beach, Tamil Nadu" required>
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Hazard Category</label>
+              <select id="report-hazard-category" class="vintage-select" style="width: 100%;">
+                <option value="rip_current">🌀 Strong Rip Current / Undertow</option>
+                <option value="high_waves">🌊 Unusually High Breakers</option>
+                <option value="debris">🪵 Coastal Debris / Submerged Rocks</option>
+                <option value="jellyfish">🪼 Marine Life (Jellyfish / Stingrays)</option>
+                <option value="app_bug">🐛 App Data or Geolocation Bug</option>
+              </select>
+            </div>
+            <div class="form-field-group">
+              <label class="form-field-label">Field Observation Notes</label>
+              <textarea id="report-notes" class="form-input" rows="3" placeholder="Describe the conditions or issue..." required style="resize: vertical; font-family: var(--font-body); font-size: 12px;"></textarea>
+            </div>
+            <div class="modal-dialog-actions" style="margin-top: 14px;">
+              <button type="button" id="btn-cancel-report" class="btn-sheet-secondary" style="flex: 1;">Cancel</button>
+              <button type="submit" id="btn-submit-report" class="nautical-cta-btn" style="flex: 1.5; padding: 10px 14px; font-size: 11px;">Submit Report</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

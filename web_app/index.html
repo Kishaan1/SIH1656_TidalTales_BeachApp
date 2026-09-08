@@ -456,133 +456,144 @@
            BOTTOM SHEET MODAL: BEACH DETAIL, GEMINI AI & OCEAN METRICS
            ================================================================ -->
       <div id="sheet-backdrop" class="bottom-sheet-backdrop"></div>
-      <aside id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true">
+      <aside id="bottom-sheet" class="bottom-sheet detail-sheet" role="dialog" aria-modal="true">
         <div class="sheet-handle"></div>
-        <div class="sheet-header">
-          <div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
-              <h2 id="sheet-beach-name" class="sheet-title" style="margin: 0;">Marina Beach</h2>
+        <div class="detail-sheet-header sheet-header">
+          <div class="header-titles">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px;">
+              <span class="badge-pill suitability-tag score-status-badge" id="detail-suitability">Safe to Swim</span>
               <span id="sheet-category-badge" class="sheet-category-pill">🏖️ Urban Promenade</span>
               <span id="detail-source-badge" class="source-badge incois">🏛️ INCOIS Certified</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
-              <p id="sheet-beach-state" class="sheet-subtitle" style="margin: 0;">Tamil Nadu · Bay of Bengal</p>
+            <h2 id="detail-beach-name" class="sheet-title" style="margin: 0;"><span id="sheet-beach-name">Marina Beach</span></h2>
+            <p class="detail-location-sub sheet-subtitle" id="detail-beach-location" style="margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span id="sheet-beach-state">Tamil Nadu · Bay of Bengal</span>
               <span style="color: var(--deckle-border);">·</span>
               <span id="sheet-rating-stars" class="sheet-rating-pill">★ 4.8</span>
               <span id="sheet-review-count" style="font-size: 11px; color: var(--muted-slate);">(1,420 Reviews)</span>
               <span style="color: var(--deckle-border);">·</span>
               <span id="sheet-gps-dist" style="font-size: 11px; color: var(--vintage-teal); font-weight: 600;">📍 3.9 km</span>
-            </div>
+            </p>
           </div>
-          <button id="close-sheet-btn" class="sheet-close-btn" aria-label="Close details">✕</button>
+          <button type="button" id="btn-close-detail" class="btn-close-circle sheet-close-btn" aria-label="Close sheet">✕</button>
         </div>
 
-        <div id="sheet-suitability-box" class="suitability-box">
-          <div class="suitability-score-row">
-            <div>
-              <div class="nautical-stamp" style="color: var(--muted-slate); margin-bottom: 2px;">
-                Recreational Suitability Index
+        <!-- Scrollable Content Body -->
+        <div class="detail-sheet-content">
+          <!-- Hero Beach Imagery Box -->
+          <div class="detail-hero-box" id="detail-hero-box">
+            <img id="detail-hero-img" class="detail-hero-img" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80" alt="Beach View" />
+            <div class="photo-sun-tint"></div>
+            <div class="hero-image-overlay"></div>
+          </div>
+
+          <div id="sheet-suitability-box" class="suitability-box">
+            <div class="suitability-score-row">
+              <div>
+                <div class="nautical-stamp" style="color: var(--muted-slate); margin-bottom: 2px;">
+                  Recreational Suitability Index
+                </div>
+                <div id="sheet-score" class="score-number-large">92/100</div>
               </div>
-              <div id="sheet-score" class="score-number-large">92/100</div>
+              <div id="sheet-status-badge" class="score-status-badge">Safe to Swim</div>
             </div>
-            <div id="sheet-status-badge" class="score-status-badge">Safe to Swim</div>
+            <ul id="sheet-reasons" class="reasons-list">
+              <!-- Populated dynamically -->
+            </ul>
           </div>
-          <ul id="sheet-reasons" class="reasons-list">
-            <!-- Populated dynamically -->
-          </ul>
-        </div>
 
-        <!-- 4-Card Oceanographic Sub-Scores -->
-        <div class="ocean-metrics-grid">
-          <div class="metric-card">
-            <div class="metric-label">🌊 Wave Height (40%)</div>
-            <div id="metric-wave-val" class="metric-val">0.9 m</div>
-            <div id="metric-wave-sub" class="metric-sub">Ideal (&lt;1.2m)</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">💨 Wind Speed (20%)</div>
-            <div id="metric-wind-val" class="metric-val">9.7 kts</div>
-            <div id="metric-wind-sub" class="metric-sub">18 km/h · Ideal (&lt;15 kts)</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">⏱️ Swell Period (15%)</div>
-            <div id="metric-swell-val" class="metric-val">7.0 s</div>
-            <div id="metric-swell-sub" class="metric-sub">Calm (&lt;12s)</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">💧 Water Quality (25%)</div>
-            <div id="metric-water-val" class="metric-val">62 / 100</div>
-            <div id="metric-water-sub" class="metric-sub">Good clarity rating</div>
-          </div>
-        </div>
-
-        <p id="sheet-beach-description" style="font-size: 12px; color: var(--muted-slate); line-height: 1.5; margin-top: 8px;">
-          <!-- Description -->
-        </p>
-
-        <!-- Live Busyness Histogram / Peak Hours Indicator -->
-        <div class="busyness-histogram-card">
-          <div class="busyness-header">
-            <span class="nautical-stamp" style="font-size: 10px; color: var(--driftwood-ink);">👥 Live Crowd &amp; Peak Hours</span>
-            <span id="busyness-current-label" class="busyness-status-pill">Usually not busy</span>
-          </div>
-          <div id="busyness-bars-row" class="busyness-bars-row">
-            <!-- Hourly bars generated dynamically -->
-          </div>
-          <div class="busyness-time-labels">
-            <span>6 AM</span>
-            <span>10 AM</span>
-            <span>2 PM</span>
-            <span>5 PM (Peak)</span>
-            <span>9 PM</span>
-          </div>
-        </div>
-
-        <!-- ============================================================
-             GEMINI AI COASTAL SAFETY ADVISOR CARD
-             ============================================================ -->
-        <div class="gemini-ai-card">
-          <div class="gemini-ai-header">
-            <div class="gemini-title-group">
-              <span class="gemini-sparkle-icon">✨</span>
-              <span class="nautical-stamp" style="color: var(--driftwood-ink);">Tidal AI · Powered by Google Gemini 3.6</span>
+          <!-- 4-Card Oceanographic Sub-Scores -->
+          <div class="ocean-metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">🌊 Wave Height (40%)</div>
+              <div id="metric-wave-val" class="metric-val">0.9 m</div>
+              <div id="metric-wave-sub" class="metric-sub">Ideal (&lt;1.2m)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">💨 Wind Speed (20%)</div>
+              <div id="metric-wind-val" class="metric-val">9.7 kts</div>
+              <div id="metric-wind-sub" class="metric-sub">18 km/h · Ideal (&lt;15 kts)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">⏱️ Swell Period (15%)</div>
+              <div id="metric-swell-val" class="metric-val">7.0 s</div>
+              <div id="metric-swell-sub" class="metric-sub">Calm (&lt;12s)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">💧 Water Quality (25%)</div>
+              <div id="metric-water-val" class="metric-val">62 / 100</div>
+              <div id="metric-water-sub" class="metric-sub">Good clarity rating</div>
             </div>
           </div>
 
-          <p style="font-size: 11px; color: var(--muted-slate); margin: 6px 0 10px;">
-            Ask Gemini for an intelligent, real-time safety briefing based on live INCOIS wave, wind, and swell telemetry.
+          <p id="sheet-beach-description" style="font-size: 12px; color: var(--muted-slate); line-height: 1.5; margin-top: 8px;">
+            <!-- Description -->
           </p>
 
-          <!-- Quick Query Prompt Chips -->
-          <div class="gemini-chips-row">
-            <button class="gemini-chip" data-q="Can kids swim safely?">
-              👨‍👩‍👧 Can kids swim safely?
-            </button>
-            <button class="gemini-chip" data-q="Explain rip current risks">
-              🌊 Explain rip current risks
-            </button>
-            <button class="gemini-chip" data-q="Best safe activities today">
-              🏄 Best safe activities today
-            </button>
-          </div>
-
-          <!-- Custom Query Input -->
-          <div class="gemini-input-row" style="margin-top: 8px;">
-            <input type="text" id="gemini-custom-input" class="gemini-text-input" placeholder="Ask custom coastal safety question..." />
-            <button id="btn-ask-gemini" class="gemini-send-btn">Ask AI</button>
-          </div>
-
-          <!-- Response Container (Auto-sizing & scrolling) -->
-          <div id="gemini-response-box" class="gemini-response-box ai-response-box" style="display: none;">
-            <div id="gemini-loading-spinner" class="gemini-loading" style="display: none;">
-              <span>🌊</span> Analyzing live INCOIS ocean telemetry with Gemini AI...
+          <!-- Live Busyness Histogram / Peak Hours Indicator -->
+          <div class="busyness-histogram-card">
+            <div class="busyness-header">
+              <span class="nautical-stamp" style="font-size: 10px; color: var(--driftwood-ink);">👥 Live Crowd &amp; Peak Hours</span>
+              <span id="busyness-current-label" class="busyness-status-pill">Usually not busy</span>
             </div>
-            <div id="gemini-response-text" class="gemini-text-output"></div>
+            <div id="busyness-bars-row" class="busyness-bars-row">
+              <!-- Hourly bars generated dynamically -->
+            </div>
+            <div class="busyness-time-labels">
+              <span>6 AM</span>
+              <span>10 AM</span>
+              <span>2 PM</span>
+              <span>5 PM (Peak)</span>
+              <span>9 PM</span>
+            </div>
+          </div>
+
+          <!-- ============================================================
+               GEMINI AI COASTAL SAFETY ADVISOR CARD
+               ============================================================ -->
+          <div class="gemini-ai-card">
+            <div class="gemini-ai-header">
+              <div class="gemini-title-group">
+                <span class="gemini-sparkle-icon">✨</span>
+                <span class="nautical-stamp" style="color: var(--driftwood-ink);">Tidal AI · Powered by Google Gemini 3.6</span>
+              </div>
+            </div>
+
+            <p style="font-size: 11px; color: var(--muted-slate); margin: 6px 0 10px;">
+              Ask Gemini for an intelligent, real-time safety briefing based on live INCOIS wave, wind, and swell telemetry.
+            </p>
+
+            <!-- Quick Query Prompt Chips -->
+            <div class="gemini-chips-row">
+              <button class="gemini-chip" data-q="Can kids swim safely?">
+                👨‍👩‍👧 Can kids swim safely?
+              </button>
+              <button class="gemini-chip" data-q="Explain rip current risks">
+                🌊 Explain rip current risks
+              </button>
+              <button class="gemini-chip" data-q="Best safe activities today">
+                🏄 Best safe activities today
+              </button>
+            </div>
+
+            <!-- Custom Query Input -->
+            <div class="gemini-input-row" style="margin-top: 8px;">
+              <input type="text" id="gemini-custom-input" class="gemini-text-input" placeholder="Ask custom coastal safety question..." />
+              <button id="btn-ask-gemini" class="gemini-send-btn">Ask AI</button>
+            </div>
+
+            <!-- Response Container (Auto-sizing & scrolling) -->
+            <div id="gemini-response-box" class="gemini-response-box ai-response-box" style="display: none;">
+              <div id="gemini-loading-spinner" class="gemini-loading" style="display: none;">
+                <span>🌊</span> Analyzing live INCOIS ocean telemetry with Gemini AI...
+              </div>
+              <div id="gemini-response-text" class="gemini-text-output"></div>
+            </div>
           </div>
         </div>
 
-        <!-- Location Action Buttons Row -->
-        <div class="sheet-actions-row">
+        <!-- Sticky Bottom Actions Bar -->
+        <div class="detail-actions-footer sheet-actions-row">
           <button id="btn-start-navigation" class="btn-navigate-beach">
             🧭 Start Navigation
           </button>

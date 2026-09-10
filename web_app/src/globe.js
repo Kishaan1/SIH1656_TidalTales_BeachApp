@@ -219,11 +219,21 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       window.myGlobe = globeInstance;
     }
 
-    // 1. Natural Earth 110m Coastlines & Landmasses (Isolate GeoJSON errors)
+    // 1. Natural Earth 110m Coastlines & Landmasses (Enforce English NAME_EN / ADMIN properties)
     try {
       if (countriesGeoJson && countriesGeoJson.features) {
         globeInstance
           .polygonsData(countriesGeoJson.features)
+          .polygonLabel(d => {
+            const countryName = d?.properties?.NAME_EN || d?.properties?.NAME || d?.properties?.ADMIN || d?.properties?.NAME_LONG || 'Country';
+            return `
+              <div class="globe-marker-tooltip">
+                <div class="tooltip-header">
+                  <span class="tooltip-title">🗺️ ${countryName}</span>
+                </div>
+              </div>
+            `;
+          })
           .polygonCapColor(() => '#F5EBE0') // Parchment cream land
           .polygonSideColor(() => '#E0D5C1')
           .polygonStrokeColor(() => '#A89F91') // Thin solid terracotta/slate country border line

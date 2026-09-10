@@ -924,11 +924,12 @@ function initMap() {
     attributionControl: false,
   }).setView([userLocation.lat, userLocation.lon], 11);
 
-  // KEYLESS OPEN TILE LAYER (OpenStreetMap Standard Tiles)
-  // Completely eliminates "API KEY REQUIRED" error from CartoDB
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '© OpenStreetMap contributors & INCOIS',
+  // KEYLESS ENGLISH BASEMAP TILE LAYER (CARTO Voyager English Default)
+  // Enforces English (Latin script) label naming across all base map tiles and cities
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> & INCOIS',
   }).addTo(map);
 
   renderSafetyBuoyMarkers();

@@ -518,7 +518,35 @@ export const districtBorderPaths = [
 // 3. Progressive Administrative Place Names (Tier 1 & Tier 2)
 // --------------------------------------------------------------------------
 export const administrativeLabels = [
-  // --- TIER 1: Major Coastal States & Provinces (Visible at Altitude < 1.8) ---
+  // --- TIER 0: Oceans & Continents (High Orbit Altitude > 1.5) ---
+  { name: 'Indian Ocean', lat: -10.0, lng: 75.0, minAltitude: 9.0, type: 'ocean' },
+  { name: 'Bay of Bengal', lat: 14.5, lng: 87.5, minAltitude: 9.0, type: 'ocean' },
+  { name: 'Arabian Sea', lat: 15.5, lng: 64.0, minAltitude: 9.0, type: 'ocean' },
+  { name: 'Pacific Ocean', lat: 5.0, lng: 160.0, minAltitude: 9.0, type: 'ocean' },
+  { name: 'Atlantic Ocean', lat: 10.0, lng: -35.0, minAltitude: 9.0, type: 'ocean' },
+  { name: 'Asia', lat: 34.0, lng: 100.0, minAltitude: 9.0, type: 'continent' },
+  { name: 'Europe', lat: 54.0, lng: 25.0, minAltitude: 9.0, type: 'continent' },
+  { name: 'Africa', lat: 2.0, lng: 16.0, minAltitude: 9.0, type: 'continent' },
+  { name: 'Australia', lat: -25.0, lng: 133.0, minAltitude: 9.0, type: 'continent' },
+
+  // --- TIER 1: Countries & Capital Cities (Sub-continental Altitude 0.7 - 1.8) ---
+  { name: 'India', lat: 20.5937, lng: 78.9629, minAltitude: 2.8, type: 'country' },
+  { name: 'New Delhi', lat: 28.6139, lng: 77.2090, minAltitude: 1.8, type: 'capital' },
+  { name: 'Sri Lanka', lat: 7.8731, lng: 80.7718, minAltitude: 2.8, type: 'country' },
+  { name: 'Colombo', lat: 6.9271, lng: 79.8612, minAltitude: 1.8, type: 'capital' },
+  { name: 'Thailand', lat: 15.8700, lng: 100.9925, minAltitude: 2.8, type: 'country' },
+  { name: 'Bangkok', lat: 13.7563, lng: 100.5018, minAltitude: 1.8, type: 'capital' },
+  { name: 'Indonesia', lat: -0.7893, lng: 113.9213, minAltitude: 2.8, type: 'country' },
+  { name: 'Jakarta', lat: -6.2088, lng: 106.8456, minAltitude: 1.8, type: 'capital' },
+  { name: 'France', lat: 46.2276, lng: 2.2137, minAltitude: 2.8, type: 'country' },
+  { name: 'Paris', lat: 48.8566, lng: 2.3522, minAltitude: 1.8, type: 'capital' },
+  { name: 'United States', lat: 37.0902, lng: -95.7129, minAltitude: 2.8, type: 'country' },
+  { name: 'Washington D.C.', lat: 38.9072, lng: -77.0369, minAltitude: 1.8, type: 'capital' },
+  { name: 'Tanzania', lat: -6.3690, lng: 34.8888, minAltitude: 2.8, type: 'country' },
+  { name: 'Zanzibar', lat: -6.1659, lng: 39.2026, minAltitude: 1.8, type: 'state' },
+  { name: 'Stone Town', lat: -6.1630, lng: 39.1980, minAltitude: 0.9, type: 'district' },
+
+  // --- TIER 2: Major Coastal States & Provinces (Visible at Altitude < 1.8) ---
   // India
   { name: 'Tamil Nadu', lat: 11.1271, lng: 78.6569, minAltitude: 1.8, type: 'state' },
   { name: 'Kerala', lat: 10.8505, lng: 76.2711, minAltitude: 1.8, type: 'state' },
@@ -554,7 +582,7 @@ export const administrativeLabels = [
   { name: 'Rio de Janeiro State', lat: -22.3000, lng: -42.8000, minAltitude: 1.8, type: 'state' },
   { name: 'Western Cape', lat: -33.2278, lng: 21.8569, minAltitude: 1.8, type: 'state' },
 
-  // --- TIER 2: Coastal Districts & Port Cities (Visible at Altitude < 0.8) ---
+  // --- TIER 3: Coastal Districts & Port Cities (Visible at Altitude < 0.8) ---
   // India Coastal Cities & Districts
   { name: 'Chennai', lat: 13.0827, lng: 80.2707, minAltitude: 0.8, type: 'city' },
   { name: 'Kanyakumari', lat: 8.0883, lng: 77.5385, minAltitude: 0.8, type: 'district' },

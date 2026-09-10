@@ -46,6 +46,7 @@ async function loadStateBoundaries() {
 }
 
 /**
+ * /**
  * Spherical horizon visibility check to cull far-side markers behind Earth curvature
  */
 export function isPointOnVisibleFrontHemisphere(lat, lng, povLat, povLng) {
@@ -57,7 +58,7 @@ export function isPointOnVisibleFrontHemisphere(lat, lng, povLat, povLng) {
   const lambda2 = povLng * rad;
 
   const dot = Math.sin(phi1) * Math.sin(phi2) + Math.cos(phi1) * Math.cos(phi2) * Math.cos(lambda1 - lambda2);
-  return dot > 0.05; // 0.05 cutoff (~87 deg) filters out points past the horizon curvature
+  return dot > 0.10; // 0.10 cutoff (~84 deg) strictly occludes markers past the horizon curvature
 }
 
 export function filterNonCollidingBeaches(beachesList, activeBeachId, minDistanceDeg = 0.35) {
@@ -179,7 +180,7 @@ function getSuitabilityColor(beach) {
 }
 
 /**
- * Initialize 3D Globe with 110m Natural Earth polygons, sleek markers, and non-colliding labels
+ * Initialize 3D Globe with Photorealistic Blue Marble day map texture & topographical relief bump map
  */
 export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = null) {
   if (!container) return null;
@@ -202,16 +203,16 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || 500;
 
-    // Initialize Globe.gl
+    // Initialize Globe.gl with high-fidelity Blue Marble Earth texture & relief bump mapping
     globeInstance = Globe()(container)
       .width(width)
       .height(height)
-      .globeImageUrl(oceanTextureUrl)
-      .bumpImageUrl(null)
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl(null)
       .showAtmosphere(true)
-      .atmosphereColor('#FAF1E4')
-      .atmosphereAltitude(0.15)
+      .atmosphereColor('#a8d5e5')
+      .atmosphereAltitude(0.18)
       .showGraticules(false);
 
     // Expose globally for unified mapping interactions
@@ -234,9 +235,9 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
               </div>
             `;
           })
-          .polygonCapColor(() => '#F5EBE0') // Parchment cream land
+          .polygonCapColor(() => 'rgba(245, 235, 224, 0.25)') // Semi-transparent parchment layer over Blue Marble
           .polygonSideColor(() => '#E0D5C1')
-          .polygonStrokeColor(() => '#A89F91') // Thin solid terracotta/slate country border line
+          .polygonStrokeColor(() => 'rgba(168, 159, 145, 0.75)') // Thin solid country border line
           .polygonAltitude(0.005)
           .polygonCapCurvatureResolution(2);
       }
@@ -279,8 +280,8 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
         if (!beach) return;
         const lat = beach.latitude ?? beach.lat;
         const lng = beach.longitude ?? beach.lng;
-        globeInstance.pointOfView({ lat, lng, altitude: 1.1 }, 1000);
-        flyToBeach(beach, 1.1, 1000);
+        globeInstance.pointOfView({ lat, lng, altitude: 0.9 }, 1200);
+        flyToBeach(beach, 0.9, 1200);
         if (typeof window.openBeachDetailSheet === 'function') {
           window.openBeachDetailSheet(beach);
         } else if (onSelectBeachCallback && beach.id) {
@@ -318,9 +319,9 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       .labelLat(d => d.lat)
       .labelLng(d => d.lng)
       .labelText(d => d.name)
-      .labelSize(d => (d.type === 'state' ? 1.0 : (d.type === 'city' ? 0.85 : 0.75)))
-      .labelDotRadius(d => (d.type === 'city' || d.type === 'district' ? 0.25 : 0))
-      .labelColor(() => 'rgba(43, 76, 86, 0.80)')
+      .labelSize(d => (d.type === 'ocean' ? 1.2 : (d.type === 'continent' ? 1.1 : (d.type === 'country' ? 1.0 : (d.type === 'state' ? 0.9 : 0.75)))))
+      .labelDotRadius(d => (d.type === 'city' || d.type === 'district' || d.type === 'capital' ? 0.25 : 0))
+      .labelColor(d => (d.type === 'ocean' ? 'rgba(232, 147, 91, 0.85)' : 'rgba(43, 76, 86, 0.85)'))
       .labelAltitude(0.010)
       .labelResolution(2);
 
@@ -352,7 +353,7 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
 
     // Initial state lines & place names visible on boot
     updateGlobeBorders({ showStates: true, showDistrictsAndCities: false });
-    updateGlobeLabels(2.5);
+    updateGlobeLabels(1.85);
 
     // 8. OrbitControls & Ambient Auto-Rotation Listener
     const controls = globeInstance.controls();
@@ -468,15 +469,18 @@ export function updateGlobeLabels(currentAltitude = 2.5) {
   if (!globeInstance) return;
 
   let visible = [];
-  if (currentAltitude < 0.9) {
-    visible = administrativeLabels; // Show both states and districts/cities
-  } else if (currentAltitude < 1.8) {
-    visible = administrativeLabels.filter(p => p.type === 'state' || p.minAltitude >= 1.8);
+  if (currentAltitude > 1.5) {
+    // High Orbit (> 1.5): Oceans, Continents, Countries, Major States
+    visible = administrativeLabels.filter(p => p.type === 'ocean' || p.type === 'continent' || p.type === 'country' || p.type === 'state');
+  } else if (currentAltitude >= 0.7) {
+    // Sub-continental (0.7 - 1.5): Countries, Capitals, States
+    visible = administrativeLabels.filter(p => p.type === 'country' || p.type === 'capital' || p.type === 'state' || p.minAltitude >= 1.2);
   } else {
-    visible = administrativeLabels.filter(p => p.type === 'state');
+    // Regional / Coastal (< 0.7): State boundaries, Districts, Cities, Coastal Landmarks
+    visible = administrativeLabels;
   }
 
-  // Filter visible labels against current camera point of view
+  // Filter visible labels against current camera point of view to prevent horizon bleeding
   const pov = typeof globeInstance.pointOfView === 'function' ? globeInstance.pointOfView() : null;
   if (pov && pov.lat !== undefined && pov.lng !== undefined) {
     visible = visible.filter(item => isPointOnVisibleFrontHemisphere(item.lat, item.lng, pov.lat, pov.lng));
@@ -487,9 +491,9 @@ export function updateGlobeLabels(currentAltitude = 2.5) {
     .labelLat(d => d.lat)
     .labelLng(d => d.lng)
     .labelText(d => d.name)
-    .labelSize(d => (d.type === 'state' ? 1.0 : (d.type === 'city' ? 0.85 : 0.75)))
-    .labelDotRadius(d => (d.type === 'city' || d.type === 'district' ? 0.25 : 0))
-    .labelColor(() => 'rgba(43, 76, 86, 0.80)')
+    .labelSize(d => (d.type === 'ocean' ? 1.2 : (d.type === 'continent' ? 1.1 : (d.type === 'country' ? 1.0 : (d.type === 'state' ? 0.9 : 0.75)))))
+    .labelDotRadius(d => (d.type === 'city' || d.type === 'district' || d.type === 'capital' ? 0.25 : 0))
+    .labelColor(d => (d.type === 'ocean' ? 'rgba(232, 147, 91, 0.85)' : 'rgba(43, 76, 86, 0.85)'))
     .labelAltitude(0.010)
     .labelResolution(2)
     .labelsTransitionDuration(300);
@@ -541,8 +545,8 @@ function updateHtmlLabels(beaches, activeBeachId, pov = null) {
         e.stopPropagation();
         const lat = d.latitude ?? d.lat;
         const lng = d.longitude ?? d.lng;
-        globeInstance.pointOfView({ lat, lng, altitude: 1.1 }, 1000);
-        flyToBeach(d, 1.1, 1000);
+        globeInstance.pointOfView({ lat, lng, altitude: 0.9 }, 1200);
+        flyToBeach(d, 0.9, 1200);
         if (typeof window.openBeachDetailSheet === 'function') {
           window.openBeachDetailSheet(d);
         } else if (onSelectBeachCallback && d.id) {

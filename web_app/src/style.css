@@ -2408,12 +2408,33 @@ body.device-preview-active .device-status-bar {
   padding-top: 4px;
 }
 
-/* Bottom Sheet Modal */
+/* Mapping Layer Canvas Containers & Smooth Cross-Fade Transition */
+#map-view,
+#globe-container,
+#globe-3d-container,
+#vintage-map {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: opacity 0.35s ease-in-out;
+}
+
+#globe-3d-container.active,
+#vintage-map.active {
+  opacity: 1;
+}
+
+#globe-3d-container:not(.active),
+#vintage-map:not(.active) {
+  opacity: 0;
+}
+
+/* Bottom Sheet Modal & Unified Beach Detail Panel */
 .bottom-sheet-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(44, 34, 30, 0.48);
-  z-index: 600;
+  z-index: 999;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -2423,6 +2444,23 @@ body.device-preview-active .device-status-bar {
 .bottom-sheet-backdrop.active {
   opacity: 1;
   pointer-events: auto;
+}
+
+#beach-detail-panel {
+  position: fixed;
+  right: 24px;
+  top: 64px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 84px);
+  z-index: 1000 !important; /* Always above 2D map tiles and 3D globe canvas */
+  box-shadow: 0 12px 36px rgba(43, 76, 86, 0.2);
+}
+
+#beach-detail-panel.hidden,
+.bottom-sheet.hidden,
+.detail-sheet.hidden {
+  display: none !important;
 }
 
 .bottom-sheet,
@@ -2436,10 +2474,10 @@ body.device-preview-active .device-status-bar {
   border-radius: 28px 28px 0 0;
   border-top: 3px solid var(--deckle-border);
   padding: 16px 20px 24px;
-  z-index: 650;
+  z-index: 1000 !important;
   transform: translateY(105%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 -10px 30px rgba(44, 34, 30, 0.25);
+  box-shadow: 0 12px 36px rgba(43, 76, 86, 0.2);
   max-height: 88%;
   overflow-y: auto; /* Full drawer body scrolls cleanly */
   overscroll-behavior: contain;
@@ -2447,7 +2485,8 @@ body.device-preview-active .device-status-bar {
 }
 
 .bottom-sheet.active,
-.detail-sheet.active {
+.detail-sheet.active,
+#beach-detail-panel.active {
   transform: translateY(0);
 }
 
@@ -3610,16 +3649,16 @@ body:not(.authenticated) #top-alert-banner,
     right: 24px;
     bottom: auto;
     left: auto;
-    width: 480px;
-    max-width: calc(100vw - 500px);
+    width: 400px;
+    max-width: calc(100vw - 32px);
     height: calc(100vh - 84px);
-    max-height: 880px;
+    max-height: calc(100vh - 84px);
     border-radius: 16px;
     border: 2px solid var(--deckle-border);
-    box-shadow: -14px 14px 44px rgba(44, 34, 30, 0.25);
+    box-shadow: 0 12px 36px rgba(43, 76, 86, 0.2);
     transform: translateX(125%);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 650;
+    z-index: 1000 !important;
     background: #FAF1E4;
     overflow-y: auto; /* Full drawer body scrolls cleanly */
     overscroll-behavior: contain;
@@ -3629,7 +3668,8 @@ body:not(.authenticated) #top-alert-banner,
   }
 
   body:not(.device-preview-active) .bottom-sheet.active,
-  body:not(.device-preview-active) .detail-sheet.active {
+  body:not(.device-preview-active) .detail-sheet.active,
+  body:not(.device-preview-active) #beach-detail-panel.active {
     transform: translateX(0);
   }
 
@@ -4685,4 +4725,32 @@ body:not(.authenticated) #top-alert-banner,
   .settings-panel .sheet-handle {
     display: none;
   }
+}
+
+/* Defensive Structural Layout Fallbacks for Container Sizing & Visibility */
+#app-layout,
+.home-dashboard-container {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 48px);
+  position: relative;
+  overflow: hidden;
+}
+
+#sidebar,
+.beach-cards-strip-container {
+  min-width: 320px;
+  height: 100%;
+  z-index: 20;
+  display: flex !important;
+  flex-direction: column;
+}
+
+#map-wrapper,
+#globe-container,
+#globe-3d-container,
+#map-container-wrapper {
+  flex: 1;
+  height: 100%;
+  position: relative;
 }

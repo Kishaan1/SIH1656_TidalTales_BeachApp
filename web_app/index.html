@@ -271,8 +271,8 @@
 
         <!-- Map Section with 3D Globe & 2D Driving Perspective Capability -->
         <main id="map-wrapper" class="map-container-wrapper view-3d-globe">
-          <div id="globe-3d-container" class="globe-viewport active"></div>
-          <div id="vintage-map" style="display: none;"></div>
+          <div id="globe-3d-container" class="globe-viewport active" data-alias="globe-container"></div>
+          <div id="vintage-map" class="map-view-canvas" data-alias="map-view" style="display: none;"></div>
           <div class="map-vignette"></div>
 
           <!-- Projection Switcher / View Toggle Button -->
@@ -456,7 +456,8 @@
            BOTTOM SHEET MODAL: BEACH DETAIL, GEMINI AI & OCEAN METRICS
            ================================================================ -->
       <div id="sheet-backdrop" class="bottom-sheet-backdrop"></div>
-      <aside id="bottom-sheet" class="bottom-sheet detail-sheet" role="dialog" aria-modal="true">
+      <aside id="beach-detail-panel" class="bottom-sheet detail-sheet" role="dialog" aria-modal="true" aria-hidden="true">
+        <div id="bottom-sheet" class="bottom-sheet-alias" style="display:none;" aria-hidden="true"></div>
         <div class="sheet-handle"></div>
         <div class="detail-sheet-header sheet-header">
           <div class="header-titles">
@@ -482,7 +483,8 @@
         <div class="detail-sheet-content">
           <!-- Hero Beach Imagery Box -->
           <div class="detail-hero-box" id="detail-hero-box">
-            <img id="detail-hero-img" class="detail-hero-img" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80" alt="Beach View" />
+            <img id="detail-beach-img" class="detail-hero-img" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80" alt="Beach View" />
+            <img id="detail-hero-img" class="detail-hero-img-alias" style="display:none;" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80" alt="Beach View Hero" />
             <div class="photo-sun-tint"></div>
             <div class="hero-image-overlay"></div>
           </div>

@@ -36,7 +36,14 @@ import {
   clearSystemTileCache,
   calculateStorageUsageMB,
 } from './settings.js';
-import { initGlobe, flyToBeach, updateGlobeData, resizeGlobe } from './globe.js';
+import {
+  initGlobe,
+  flyToBeach,
+  updateGlobeData,
+  resizeGlobe,
+  updateGlobeBorders,
+  updateGlobeLabels,
+} from './globe.js';
 import { getBeachTelemetry } from './marineTelemetry.js';
 
 // Application State
@@ -194,25 +201,46 @@ let isDashboardInitialized = false;
 
 function initMapAndDashboard() {
   if (isDashboardInitialized) {
-    if (typeof map !== 'undefined' && map) {
-      setTimeout(() => map.invalidateSize(true), 100);
-      setTimeout(() => map.invalidateSize(true), 350);
+    try {
+      if (typeof map !== 'undefined' && map) {
+        setTimeout(() => map.invalidateSize(true), 100);
+        setTimeout(() => map.invalidateSize(true), 350);
+      }
+      resizeGlobe();
+    } catch (e) {
+      console.warn("Resize error:", e);
     }
-    resizeGlobe();
     return;
   }
   isDashboardInitialized = true;
-  initMap();
-  initGlobeView();
-  renderPolaroidCarousel();
-  initSimulator();
-  initAlertSystem();
-  initFilters();
-  initUniversalSearch();
-  initNavigationEvents();
-  initGeminiAssistant();
-  initSettings();
-  selectBeach(beaches[0].id);
+
+  // 1. ALWAYS mount essential UI components and left sidebar first
+  try { renderPolaroidCarousel(); } catch (e) { console.error("Error rendering carousel:", e); }
+  try { initSimulator(); } catch (e) { console.error("Error initializing simulator:", e); }
+  try { initAlertSystem(); } catch (e) { console.error("Error initializing alerts:", e); }
+  try { initFilters(); } catch (e) { console.error("Error initializing filters:", e); }
+  try { initUniversalSearch(); } catch (e) { console.error("Error initializing search:", e); }
+  try { initNavigationEvents(); } catch (e) { console.error("Error initializing navigation:", e); }
+  try { initGeminiAssistant(); } catch (e) { console.error("Error initializing Gemini assistant:", e); }
+  try { initSettings(); } catch (e) { console.error("Error initializing settings:", e); }
+  try { selectBeach(beaches[0].id); } catch (e) { console.error("Error selecting default beach:", e); }
+
+  // 2. Initialize visual 2D map layer independently
+  try {
+    initMap();
+  } catch (err) {
+    console.error("2D Map initialization failed:", err);
+  }
+
+  // 3. Initialize visual 3D globe layer independently
+  try {
+    initGlobeView();
+  } catch (err) {
+    console.error("3D Globe initialization failed, falling back to 2D:", err);
+    if (typeof setProjectionView === 'function') {
+      setProjectionView('2d');
+    }
+  }
 }
 
 function mountDashboard() {
@@ -911,13 +939,48 @@ function initMap() {
  * Initialize the 3D Interactive Rotating Globe and Projection Switcher
  */
 function initGlobeView() {
-  const globeContainer = document.getElementById('globe-3d-container');
-  if (globeContainer) {
-    globeInstance = initGlobe(globeContainer, getFilteredBeaches(), (beachId) => {
-      selectBeach(beachId);
-      openBottomSheet();
-    });
+  try {
+    const globeContainer = document.getElementById('globe-3d-container') || document.getElementById('globe-container');
+    if (globeContainer) {
+      globeInstance = initGlobe(
+        globeContainer,
+        getFilteredBeaches(),
+        (beachId) => {
+          const b = beaches.find(item => item.id === beachId);
+          if (b && typeof window.openBeachDetailSheet === 'function') {
+            window.openBeachDetailSheet(b);
+          } else {
+            selectBeach(beachId, true);
+            openBottomSheet();
+          }
+        },
+        ({ lat, lng }) => {
+          // Auto-switch to 2D Road Map on extreme zoom (< 0.25 altitude)
+          setProjectionView('2d');
+          if (map && typeof map.flyTo === 'function') {
+            map.flyTo([lat, lng], 14, { duration: 1.2 });
+          }
+          showHazardToast('Switched to 2D Road Map', 'Deep zoom active: street & shoreline resolution unlocked.');
+        }
+      );
+      window.myGlobe = globeInstance;
+    }
+  } catch (err) {
+    console.error('Globe view initialization failed:', err);
+    if (typeof setProjectionView === 'function') {
+      setProjectionView('2d');
+    }
   }
+
+  window.onGlobeExtremeZoom = ({ lat, lng }) => {
+    try {
+      setProjectionView('2d');
+      if (map && typeof map.flyTo === 'function') {
+        map.flyTo([lat, lng], 14, { duration: 1.2 });
+      }
+      showHazardToast('Switched to 2D Road Map', 'Deep zoom active: street & shoreline resolution unlocked.');
+    } catch (e) {}
+  };
 
   const toggleBtn = document.getElementById('btn-toggle-globe-view');
   toggleBtn?.addEventListener('click', () => {
@@ -927,6 +990,10 @@ function initGlobeView() {
 
 function setProjectionView(mode) {
   currentProjectionView = mode;
+  if (typeof window !== 'undefined') {
+    window.switchTo2DMap = () => setProjectionView('2d');
+    window.setProjectionView = setProjectionView;
+  }
   const globeContainer = document.getElementById('globe-3d-container');
   const mapElement = document.getElementById('vintage-map');
   const toggleBtn = document.getElementById('btn-toggle-globe-view');
@@ -971,6 +1038,12 @@ function setProjectionView(mode) {
       setTimeout(() => map.invalidateSize(), 60);
       setTimeout(() => map.invalidateSize(), 250);
     }
+  }
+
+  try {
+    renderPolaroidCarousel();
+  } catch (e) {
+    console.error("Error refreshing carousel on projection change:", e);
   }
 }
 
@@ -1061,8 +1134,15 @@ function renderSafetyBuoyMarkers() {
 
     marker.on('click', () => {
       if (!isNavigating) {
-        selectBeach(beach.id);
-        openBottomSheet();
+        const lat = beach.lat ?? beach.latitude;
+        const lng = beach.lng ?? beach.longitude;
+        map.flyTo([lat, lng], 12, { duration: 1.2 });
+        if (typeof window.openBeachDetailSheet === 'function') {
+          window.openBeachDetailSheet(beach);
+        } else {
+          selectBeach(beach.id);
+          openBottomSheet();
+        }
       }
     });
 
@@ -1164,23 +1244,185 @@ function renderPolaroidCarousel() {
     `;
 
     card.addEventListener('click', () => {
-      selectBeach(beach.id);
-      openBottomSheet();
+      handleCardClick(beach);
     });
 
     carousel.appendChild(card);
   });
 }
 
-function selectBeach(id) {
+export function calculateSuitability(beach) {
+  if (!beach) return null;
+  const reading = beach.reading || {
+    waveHeightM: 0.9,
+    windSpeedKmph: 18,
+    swellPeriodSec: 7,
+    waterQualityIndex: 65,
+  };
+  return evaluateSuitability(reading);
+}
+if (typeof window !== 'undefined') {
+  window.calculateSuitability = calculateSuitability;
+}
+
+export function updateSuitabilityUI(suitability, beach) {
+  if (!suitability) return;
+  const detailSuitability = document.getElementById('detail-suitability');
+  if (detailSuitability) {
+    detailSuitability.textContent = suitability.status;
+    detailSuitability.style.backgroundColor = suitability.statusColor;
+    detailSuitability.style.color = '#fff';
+  }
+  const badgeEl = document.getElementById('sheet-status-badge');
+  if (badgeEl) {
+    badgeEl.textContent = suitability.status;
+    badgeEl.style.backgroundColor = suitability.statusColor;
+  }
+  const scoreEl = document.getElementById('sheet-score');
+  if (scoreEl) {
+    scoreEl.textContent = `${suitability.score.toFixed(0)}/100`;
+    scoreEl.style.color = suitability.statusColor;
+  }
+  const reasonsList = document.getElementById('sheet-reasons');
+  if (reasonsList && suitability.reasons) {
+    reasonsList.innerHTML = '';
+    suitability.reasons.forEach(r => {
+      const li = document.createElement('li');
+      li.textContent = r;
+      reasonsList.appendChild(li);
+    });
+  }
+}
+if (typeof window !== 'undefined') {
+  window.updateSuitabilityUI = updateSuitabilityUI;
+}
+
+export function resetTidalAIContext(beach, suitability) {
+  const geminiBox = document.getElementById('gemini-response-box');
+  const geminiOutput = document.getElementById('gemini-response-text');
+  const userBubble = document.getElementById('ai-user-bubble');
+  const userText = document.getElementById('ai-user-bubble-text');
+  const aiBubble = document.getElementById('ai-message-bubble');
+  const inputEl = document.getElementById('gemini-custom-input');
+
+  if (geminiBox) geminiBox.style.display = 'none';
+  if (geminiOutput) geminiOutput.innerHTML = '';
+  if (userBubble) userBubble.style.display = 'none';
+  if (userText) userText.textContent = '';
+  if (aiBubble) aiBubble.style.display = 'none';
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.placeholder = `Ask anything about ${beach?.name || 'this coast'}...`;
+  }
+}
+if (typeof window !== 'undefined') {
+  window.resetTidalAIContext = resetTidalAIContext;
+}
+
+window.openBeachDetailSheet = function(beach) {
+  if (typeof beach === 'string' || typeof beach === 'number') {
+    beach = beaches.find(b => b.id === beach) || beaches[0];
+  }
+  if (!beach) return;
+
+  // 1. Populate all card metadata (Image, Title, Tags, Scores)
+  const nameEl = document.getElementById('detail-beach-name');
+  if (nameEl) nameEl.textContent = beach.name;
+  const sheetBeachName = document.getElementById('sheet-beach-name');
+  if (sheetBeachName) sheetBeachName.textContent = beach.name;
+
+  const locEl = document.getElementById('detail-beach-location');
+  if (locEl) {
+    locEl.textContent = `${beach.state || beach.country} • ${beach.waterBody || beach.water_body || 'Coastal Waters'}`;
+  }
+
+  const imgEl = document.getElementById('detail-beach-img') || document.getElementById('detail-hero-img');
+  const heroImg = document.getElementById('detail-hero-img');
+  const imgSrc = beach.image || beach.imageUrl || DEFAULT_BEACH_IMAGE;
+  if (imgEl) {
+    imgEl.src = imgSrc;
+    imgEl.alt = `${beach.name} coastal landscape`;
+  }
+  if (heroImg && heroImg !== imgEl) {
+    heroImg.src = imgSrc;
+  }
+
+  // 2. Calculate and bind suitability telemetry (INCOIS or Global Fallback)
+  const suitability = calculateSuitability(beach);
+  updateSuitabilityUI(suitability, beach);
+  updateBottomSheetContent(beach);
+
+  // 3. Reset and prepare Tidal AI prompt context
+  resetTidalAIContext(beach, suitability);
+
+  // 4. Reveal the panel
+  const detailPanel = document.getElementById('beach-detail-panel') || document.getElementById('bottom-sheet');
+  if (detailPanel) {
+    detailPanel.classList.remove('hidden');
+    detailPanel.classList.add('active');
+    detailPanel.setAttribute('aria-hidden', 'false');
+    detailPanel.scrollTop = 0;
+  }
+  const backdrop = document.getElementById('sheet-backdrop');
+  if (backdrop) backdrop.classList.add('active');
+
+  // Synchronize selection state in carousel and simulator
+  selectedBeachId = beach.id;
+  syncSimulatorInputs(beach);
+  document.querySelectorAll('.polaroid-card').forEach(el => el.classList.remove('selected'));
+  const cardEl = document.getElementById(`card-${beach.id}`);
+  if (cardEl) {
+    cardEl.classList.add('selected');
+    cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // Live oceanic telemetry fetch (certified INCOIS or global Open-Meteo)
+  getBeachTelemetry(beach)
+    .then(telemetry => {
+      if (telemetry) {
+        beach.reading = { ...beach.reading, ...telemetry };
+        if (telemetry.source) beach.source = telemetry.source;
+        updateBottomSheetContent(beach);
+        updateGlobeData(getFilteredBeaches(), beach);
+      }
+    })
+    .catch(err => console.warn('[TELEMETRY] Live fetch:', err));
+};
+
+export function handleCardClick(beach) {
+  if (typeof beach === 'string' || typeof beach === 'number') {
+    beach = beaches.find(b => b.id === beach) || beaches[0];
+  }
+  if (!beach) return;
+
+  const lat = beach.lat ?? beach.latitude;
+  const lng = beach.lng ?? beach.longitude;
+  const isGlobeActive = currentProjectionView === '3d';
+  const myGlobe = globeInstance || window.myGlobe;
+
+  if (isGlobeActive && typeof myGlobe !== 'undefined' && myGlobe) {
+    myGlobe.pointOfView({ lat, lng, altitude: 1.1 }, 1000);
+    flyToBeach(beach, 1.1, 1000);
+  } else if (map && typeof map.flyTo === 'function') {
+    map.flyTo([lat, lng], 12, { duration: 1.0 });
+    if (markers[beach.id]) markers[beach.id].openPopup();
+  }
+
+  window.openBeachDetailSheet(beach);
+}
+if (typeof window !== 'undefined') {
+  window.handleCardClick = handleCardClick;
+}
+
+function selectBeach(id, shouldOpenSheet = false) {
   selectedBeachId = id;
   const beach = beaches.find(b => b.id === id);
   if (!beach) return;
 
   // 3D Globe camera flight and pulsing ring
-  flyToBeach(beach);
-
-  if (map && !isNavigating) {
+  if (currentProjectionView === '3d' && globeInstance) {
+    flyToBeach(beach);
+  } else if (map && !isNavigating) {
     map.flyTo([beach.latitude, beach.longitude], 12, { duration: 1.2 });
     if (markers[id]) markers[id].openPopup();
   }
@@ -1192,8 +1434,12 @@ function selectBeach(id) {
     cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
-  updateBottomSheetContent(beach);
-  syncSimulatorInputs(beach);
+  if (shouldOpenSheet && typeof window.openBeachDetailSheet === 'function') {
+    window.openBeachDetailSheet(beach);
+  } else {
+    updateBottomSheetContent(beach);
+    syncSimulatorInputs(beach);
+  }
 
   // Live oceanic telemetry fetch (certified INCOIS or global Open-Meteo)
   getBeachTelemetry(beach)
@@ -1209,17 +1455,27 @@ function selectBeach(id) {
 }
 
 function openBottomSheet() {
-  const sheet = document.getElementById('bottom-sheet');
-  const backdrop = document.getElementById('sheet-backdrop');
-  sheet?.classList.add('active');
-  backdrop?.classList.add('active');
-  const contentEl = sheet?.querySelector('.detail-sheet-content');
-  if (contentEl) contentEl.scrollTop = 0;
-  if (sheet) sheet.scrollTop = 0;
+  const beach = beaches.find(b => b.id === selectedBeachId) || beaches[0];
+  if (beach && typeof window.openBeachDetailSheet === 'function') {
+    window.openBeachDetailSheet(beach);
+  } else {
+    const sheet = document.getElementById('beach-detail-panel') || document.getElementById('bottom-sheet');
+    const backdrop = document.getElementById('sheet-backdrop');
+    sheet?.classList.remove('hidden');
+    sheet?.classList.add('active');
+    sheet?.setAttribute('aria-hidden', 'false');
+    backdrop?.classList.add('active');
+    const contentEl = sheet?.querySelector('.detail-sheet-content');
+    if (contentEl) contentEl.scrollTop = 0;
+    if (sheet) sheet.scrollTop = 0;
+  }
 }
 
 function closeBottomSheet() {
-  document.getElementById('bottom-sheet')?.classList.remove('active');
+  const sheet = document.getElementById('beach-detail-panel') || document.getElementById('bottom-sheet');
+  sheet?.classList.add('hidden');
+  sheet?.classList.remove('active');
+  sheet?.setAttribute('aria-hidden', 'true');
   document.getElementById('sheet-backdrop')?.classList.remove('active');
 }
 
@@ -1345,7 +1601,7 @@ function updateBottomSheetContent(beach) {
   const result = evaluateSuitability(beach.reading);
 
   // Reset detail sheet scroll position to top
-  const sheet = document.getElementById('bottom-sheet');
+  const sheet = document.getElementById('beach-detail-panel') || document.getElementById('bottom-sheet');
   const contentEl = sheet?.querySelector('.detail-sheet-content');
   if (contentEl) contentEl.scrollTop = 0;
   if (sheet) sheet.scrollTop = 0;
@@ -1376,11 +1632,14 @@ function updateBottomSheetContent(beach) {
   if (descEl) descEl.textContent = beach.description || '';
 
   // Hero Imagery
-  const heroImg = document.getElementById('detail-hero-img');
+  const heroImg = document.getElementById('detail-beach-img') || document.getElementById('detail-hero-img');
   if (heroImg) {
-    heroImg.src = beach.imageUrl || DEFAULT_BEACH_IMAGE;
+    const src = beach.image || beach.imageUrl || DEFAULT_BEACH_IMAGE;
+    heroImg.src = src;
     heroImg.alt = `${beach.name} coastal landscape`;
     heroImg.onerror = () => { heroImg.src = DEFAULT_BEACH_IMAGE; };
+    const aliasImg = document.getElementById('detail-hero-img');
+    if (aliasImg && aliasImg !== heroImg) aliasImg.src = src;
   }
 
   // Header Suitability Badge
@@ -2870,7 +3129,7 @@ async function handleGeminiQuery(query) {
     }
     playAlertChime();
     setTimeout(() => {
-      const drawer = document.getElementById('bottom-sheet');
+      const drawer = document.getElementById('beach-detail-panel') || document.getElementById('bottom-sheet');
       if (drawer && responseBox) {
         const boxTop = responseBox.offsetTop;
         drawer.scrollTo({

@@ -1390,7 +1390,7 @@ window.openBeachDetailSheet = function(beach) {
     .catch(err => console.warn('[TELEMETRY] Live fetch:', err));
 };
 
-export function handleCardClick(beach) {
+export function onBeachCardSelected(beach) {
   if (typeof beach === 'string' || typeof beach === 'number') {
     beach = beaches.find(b => b.id === beach) || beaches[0];
   }
@@ -1402,16 +1402,28 @@ export function handleCardClick(beach) {
   const myGlobe = globeInstance || window.myGlobe;
 
   if (isGlobeActive && typeof myGlobe !== 'undefined' && myGlobe) {
-    myGlobe.pointOfView({ lat, lng, altitude: 1.1 }, 1000);
-    flyToBeach(beach, 1.1, 1000);
+    // 1. Smooth Google Earth-style fly-to animation
+    myGlobe.pointOfView({
+      lat,
+      lng,
+      altitude: 0.45 // Close regional zoom
+    }, 1800);
+    flyToBeach(beach, 0.45, 1800);
   } else if (map && typeof map.flyTo === 'function') {
-    map.flyTo([lat, lng], 12, { duration: 1.0 });
+    map.flyTo([lat, lng], 14, { duration: 1.5 });
     if (markers[beach.id]) markers[beach.id].openPopup();
   }
 
-  window.openBeachDetailSheet(beach);
+  // 2. Open full detail sheet with INCOIS/telemetry & AI briefing
+  if (typeof window.openBeachDetailSheet === 'function') {
+    window.openBeachDetailSheet(beach);
+  }
 }
+
+export const handleCardClick = onBeachCardSelected;
+
 if (typeof window !== 'undefined') {
+  window.onBeachCardSelected = onBeachCardSelected;
   window.handleCardClick = handleCardClick;
 }
 

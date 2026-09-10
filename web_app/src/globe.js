@@ -211,13 +211,36 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl(null)
       .showAtmosphere(true)
-      .atmosphereColor('#a8d5e5')
-      .atmosphereAltitude(0.18)
+      .atmosphereColor('#6db3f2')
+      .atmosphereAltitude(0.2)
       .showGraticules(false);
 
     // Expose globally for unified mapping interactions
     if (typeof window !== 'undefined') {
       window.myGlobe = globeInstance;
+    }
+
+    // Tune Three.js material & add natural directional sunlight for specular ocean reflections
+    try {
+      const globeMat = globeInstance.globeMaterial();
+      if (globeMat) {
+        globeMat.bumpScale = 12;
+        globeMat.roughness = 0.65;
+        globeMat.metalness = 0.12;
+      }
+      const scene = globeInstance.scene();
+      if (scene && !scene.getObjectByName('sunLight')) {
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
+        sunLight.name = 'sunLight';
+        sunLight.position.set(5, 3, 5);
+        scene.add(sunLight);
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
+        ambLight.name = 'ambLight';
+        scene.add(ambLight);
+      }
+    } catch (mErr) {
+      console.warn('Three.js material & light configuration note:', mErr);
     }
 
     // 1. Natural Earth 110m Coastlines & Landmasses (Enforce English NAME_EN / ADMIN properties)
@@ -250,7 +273,7 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       updateGlobeBorders({ showStates: true, showDistrictsAndCities: false });
     });
 
-    // 2. High-Visibility Tactile Surface Beacon Pins
+    // 2. High-Visibility Tactile Surface Beacon Pins (with Backface Horizon Culling)
     globeInstance
       .pointsData(currentBeachesList)
       .pointLat(d => d.latitude ?? d.lat)
@@ -258,6 +281,12 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       .pointColor(d => getSuitabilityColor(d))
       .pointAltitude(0.020)     // Prominent altitude off globe surface
       .pointRadius(d => (d.id === (activeSelectedBeach?.id || currentBeachesList[0]?.id) ? 0.95 : 0.65))
+      .pointResolution(32)
+      .pointVisibility(d => {
+        const pov = typeof globeInstance.pointOfView === 'function' ? globeInstance.pointOfView() : null;
+        if (!pov || pov.lat === undefined) return true;
+        return isPointOnVisibleFrontHemisphere(d.latitude ?? d.lat, d.longitude ?? d.lng, pov.lat, pov.lng);
+      })
       .pointResolution(32)
       .pointLabel(d => `
         <div class="globe-marker-tooltip">
@@ -470,17 +499,20 @@ export function updateGlobeLabels(currentAltitude = 2.5) {
 
   let visible = [];
   if (currentAltitude > 1.5) {
-    // High Orbit (> 1.5): Oceans, Continents, Countries, Major States
-    visible = administrativeLabels.filter(p => p.type === 'ocean' || p.type === 'continent' || p.type === 'country' || p.type === 'state');
-  } else if (currentAltitude >= 0.7) {
-    // Sub-continental (0.7 - 1.5): Countries, Capitals, States
-    visible = administrativeLabels.filter(p => p.type === 'country' || p.type === 'capital' || p.type === 'state' || p.minAltitude >= 1.2);
+    // Altitude > 1.5 (Orbital View): Show continents and major oceans
+    visible = administrativeLabels.filter(p => p.type === 'ocean' || p.type === 'continent');
+  } else if (currentAltitude >= 0.6) {
+    // Altitude 0.6 – 1.5 (Country View): Render country borders and national capital names in English
+    visible = administrativeLabels.filter(p => p.type === 'ocean' || p.type === 'continent' || p.type === 'country' || p.type === 'capital');
+  } else if (currentAltitude >= 0.2) {
+    // Altitude 0.2 – 0.6 (Regional / State View): Reveal state/province lines, major coastal cities, and coastal region tags
+    visible = administrativeLabels.filter(p => p.type !== 'local');
   } else {
-    // Regional / Coastal (< 0.7): State boundaries, Districts, Cities, Coastal Landmarks
+    // Altitude < 0.2 (Local Shoreline View): All administrative & local place names
     visible = administrativeLabels;
   }
 
-  // Filter visible labels against current camera point of view to prevent horizon bleeding
+  // Filter visible labels against current camera point of view to prevent horizon bleeding (Backface Culling)
   const pov = typeof globeInstance.pointOfView === 'function' ? globeInstance.pointOfView() : null;
   if (pov && pov.lat !== undefined && pov.lng !== undefined) {
     visible = visible.filter(item => isPointOnVisibleFrontHemisphere(item.lat, item.lng, pov.lat, pov.lng));

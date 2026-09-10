@@ -2,21 +2,37 @@
 > **Smart India Hackathon (SIH 2024) — Problem Statement SIH1656**  
 > *Real-time recreational suitability, INCOIS oceanographic telemetry, live turn-by-turn navigation, grounded Gemini AI coastal intelligence, and universal search wrapped in a nostalgic 16mm warm vintage aesthetic.*
 
+[![Live Web Application](https://img.shields.io/badge/Live_Deployment-Render-2ea44f?style=for-the-badge&logo=render)](https://sih1656-tidaltales-beachapp-1.onrender.com)
+[![Status](https://img.shields.io/badge/Status-Live_%2F_Active-brightgreen?style=for-the-badge)](https://sih1656-tidaltales-beachapp-1.onrender.com)
+
+🌐 **Live Web Application**: [https://sih1656-tidaltales-beachapp-1.onrender.com](https://sih1656-tidaltales-beachapp-1.onrender.com)
+
 ---
 
 ## 🧭 Table of Contents
-1. [Project Overview & Problem Statement](#-project-overview--problem-statement)
-2. [Monorepo Architecture](#-monorepo-architecture)
-3. [Key Features & Capabilities](#-key-features--capabilities)
-4. [Oceanographic Suitability Scoring Algorithm](#-oceanographic-suitability-scoring-algorithm)
-5. [Quickstart & Local Setup](#-quickstart--local-setup)
-   - [Web Application (Vite + Vanilla JS + Leaflet)](#1-web-application-web_app)
+1. [Live Production Deployment](#-live-production-deployment)
+2. [Project Overview & Problem Statement](#-project-overview--problem-statement)
+3. [Monorepo Architecture](#-monorepo-architecture)
+4. [Key Features & Capabilities](#-key-features--capabilities)
+5. [Oceanographic Suitability Scoring Algorithm](#-oceanographic-suitability-scoring-algorithm)
+6. [Quickstart & Local Setup](#-quickstart--local-setup)
+   - [Web Application (Vite + Vanilla JS + Leaflet + Globe.gl)](#1-web-application-web_app)
    - [Mobile Application (Flutter + Riverpod)](#2-mobile-application-sih_beach_app)
    - [Python Algorithm Prototype](#3-python-scoring-prototype)
-6. [Evaluator & Test Guide (Secret Backdoors)](#-evaluator--test-guide-secret-backdoors)
-7. [Assets, Fonts & Custom Map Styling](#-assets-fonts--custom-map-styling)
-8. [Settings, Localization & Disclosures](#-settings-localization--disclosures)
-9. [INCOIS Data Integration & Disclaimer](#-incois-data-integration--disclaimer)
+7. [Evaluator & Test Guide (Secret Backdoors)](#-evaluator--test-guide-secret-backdoors)
+8. [Assets, Fonts & Custom Map Styling](#-assets-fonts--custom-map-styling)
+9. [Settings, Localization & Disclosures](#-settings-localization--disclosures)
+10. [INCOIS Data Integration & Disclaimer](#-incois-data-integration--disclaimer)
+
+---
+
+## 🚀 Live Production Deployment
+
+The web application is deployed live on **Render**:
+
+- 🌐 **Primary Live URL**: [https://sih1656-tidaltales-beachapp-1.onrender.com](https://sih1656-tidaltales-beachapp-1.onrender.com)
+- 🔑 **Evaluator Passcode**: Use `1234` (or `2026`) on the passcode screen to unlock the full cockpit dashboard.
+- 📱 **Mobile Frame Preview**: Toggle between full responsive widescreen and mobile device frame mode via the top bar control.
 
 ---
 

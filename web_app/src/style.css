@@ -56,6 +56,25 @@ body.authenticated .auth-screen-container,
   pointer-events: none !important;
 }
 
+/* Strip any inverted transforms & reset viewport baseline */
+html, body, #app, #app-layout, .auth-modal, .auth-card, .auth-card-sheet, .auth-screen-container, .auth-wrapper, #auth-screen {
+  transform: none !important;
+  -webkit-transform: none !important;
+  direction: ltr !important;
+  writing-mode: horizontal-tb !important;
+}
+
+/* Base mobile container reset */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -68,6 +87,7 @@ body {
   background: radial-gradient(circle at 50% 20%, #2e2621 0%, #171311 100%);
   color: var(--driftwood-ink);
   min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -230,13 +250,19 @@ body.device-preview-active .device-status-bar {
    SCREEN 1: CINEMATIC 16MM AUTHENTICATION
    ========================================================================== */
 
+.auth-container,
 .auth-screen-container {
   position: absolute;
   inset: 0;
   z-index: 90;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: flex-end;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.5rem 1.25rem;
+  box-sizing: border-box;
   background-color: #1a1614;
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
@@ -332,17 +358,29 @@ body.device-preview-active .device-status-bar {
   margin-top: 4px;
 }
 
+.auth-card,
 .auth-card-sheet {
   position: relative;
   z-index: 10;
+  width: 100%;
+  max-width: 390px;
   background: var(--crisp-cream);
-  border-radius: 32px 32px 0 0;
+  border-radius: 20px 20px 0 0;
   border-top: 3px solid var(--deckle-border);
   box-shadow: var(--shadow-paper);
   padding: 20px 24px 28px;
   max-height: 75vh;
+  max-height: 75dvh;
   overflow-y: auto;
   scrollbar-width: none;
+  box-sizing: border-box;
+}
+
+.auth-card input,
+.auth-card button,
+.auth-card-sheet input,
+.auth-card-sheet button {
+  box-sizing: border-box;
 }
 
 .auth-card-sheet::-webkit-scrollbar {
@@ -3317,11 +3355,48 @@ body:not(.authenticated) #top-alert-banner,
     box-shadow: none;
   }
 
-  .home-dashboard-container {
+  #app-layout, .home-dashboard-container {
+    flex-direction: column;
+    height: 100dvh;
     position: relative;
+  }
+
+  /* Map/Globe takes full screen on mobile */
+  #map-wrapper, #globe-container, #globe-3d-container {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    z-index: 1;
+  }
+
+  /* Sidebar transforms into a draggable bottom drawer */
+  #sidebar, .sidebar-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 55dvh;
+    border-radius: 20px 20px 0 0;
+    z-index: 40;
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+  }
+
+  /* Full beach detail sheet covers mobile viewport cleanly */
+  #beach-detail-panel, .bottom-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    z-index: 60;
   }
 
   /* Compact Floating Island App Bar */

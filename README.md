@@ -9,20 +9,43 @@
 
 ---
 
+### 💻 Languages & Technologies Used
+
+#### Core Languages
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+
+#### Frameworks, Libraries & Services
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=three.js&logoColor=white)
+![Globe.gl](https://img.shields.io/badge/Globe.gl-2B4C56?style=for-the-badge&logo=globe&logoColor=white)
+![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Render](https://img.shields.io/badge/Render-000000?style=for-the-badge&logo=render&logoColor=white)
+
+---
+
 ## 🧭 Table of Contents
 1. [Live Production Deployment](#-live-production-deployment)
-2. [Project Overview & Problem Statement](#-project-overview--problem-statement)
-3. [Monorepo Architecture](#-monorepo-architecture)
-4. [Key Features & Capabilities](#-key-features--capabilities)
-5. [Oceanographic Suitability Scoring Algorithm](#-oceanographic-suitability-scoring-algorithm)
-6. [Quickstart & Local Setup](#-quickstart--local-setup)
+2. [Languages & Technologies Used](#-languages--technologies-used)
+3. [Project Overview & Problem Statement](#-project-overview--problem-statement)
+4. [Monorepo Architecture](#-monorepo-architecture)
+5. [Key Features & Capabilities](#-key-features--capabilities)
+6. [3D Google Earth-Style Globe Engine](#-3d-google-earth-style-globe-engine)
+7. [Oceanographic Suitability Scoring Algorithm](#-oceanographic-suitability-scoring-algorithm)
+8. [Quickstart & Local Setup](#-quickstart--local-setup)
    - [Web Application (Vite + Vanilla JS + Leaflet + Globe.gl)](#1-web-application-web_app)
    - [Mobile Application (Flutter + Riverpod)](#2-mobile-application-sih_beach_app)
    - [Python Algorithm Prototype](#3-python-scoring-prototype)
-7. [Evaluator & Test Guide (Secret Backdoors)](#-evaluator--test-guide-secret-backdoors)
-8. [Assets, Fonts & Custom Map Styling](#-assets-fonts--custom-map-styling)
-9. [Settings, Localization & Disclosures](#-settings-localization--disclosures)
-10. [INCOIS Data Integration & Disclaimer](#-incois-data-integration--disclaimer)
+9. [Evaluator & Test Guide (Secret Backdoors)](#-evaluator--test-guide-secret-backdoors)
+10. [Assets, Fonts & Custom Map Styling](#-assets-fonts--custom-map-styling)
+11. [Settings, Localization & Disclosures](#-settings-localization--disclosures)
+12. [INCOIS Data Integration & Disclaimer](#-incois-data-integration--disclaimer)
 
 ---
 
@@ -126,6 +149,21 @@ SIH1656_TidalTales_BeachApp/
 - Strict boot barrier prevents dashboard exposure until an authenticated session is confirmed.
 - Clean 2-step verification: Coastal Handle input followed by a 4-digit PIN matrix (`#pin-0` to `#pin-3`) with auto-advance, backspace navigation, and paste support.
 - Synchronized session states across `tidal_session` and `tidal_user_session` in `localStorage`.
+
+---
+
+## 🌍 3D Google Earth-Style Globe Engine
+
+The application features a photorealistic 3D interactive globe powered by **Globe.gl** and **Three.js**:
+
+- **Photorealistic Imagery & Lighting**: NASA Blue Marble 8K daytime imagery paired with high-resolution topographical relief bump mapping (`earth-topology.png`), atmospheric blue glow (`#6db3f2`), and Three.js directional sunlight for realistic specular ocean reflections.
+- **Continuous LOD Zoom Navigation**:
+  - **Orbital View (`Altitude > 1.5`)**: Continents and ocean labels.
+  - **Country View (`Altitude 0.6 – 1.5`)**: National boundaries and capital names in English.
+  - **Regional View (`Altitude 0.2 – 0.6`)**: State/province borders, coastal cities, and regional landmarks.
+  - **Local Shoreline View (`Altitude < 0.2`)**: Seamlessly cross-fades into high-resolution 2D satellite/street tiles with district lines, roads, and beach access points.
+- **Backface Horizon Occlusion**: Strict surface normal calculation (`isPointOnVisibleFrontHemisphere`) and complete DOM element hiding (`display: 'none'`) to prevent far-side marker stacking along the Earth's curvature.
+- **Unified Card Interactivity**: Clicking any beach card in the left sidebar triggers a smooth 1800ms camera flight to `altitude: 0.45` and opens the INCOIS telemetry & AI briefing sheet.
 
 ---
 

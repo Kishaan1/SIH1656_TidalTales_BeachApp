@@ -357,7 +357,14 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
     // 6. Billboarded Non-Colliding HTML Labels
     updateHtmlLabels(currentBeachesList, currentBeachesList[0]?.id);
 
-    // 7. Dynamic Zoom & Camera Rotation Listener
+    // 7. Dynamic Zoom, Double Click & Camera Rotation Listener
+    globeInstance.onGlobeClick(({ lat, lng }, event) => {
+      // Double-click on globe to fly straight into regional detail
+      if (event && (event.detail === 2 || event.type === 'dblclick')) {
+        globeInstance.pointOfView({ lat, lng, altitude: 0.15 }, 1200);
+      }
+    });
+
     globeInstance.onZoom(({ lat, lng, altitude }) => {
       const showStates = altitude < 3.2;
       const showDistrictsAndCities = altitude < 1.4;
@@ -367,14 +374,17 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       const pov = { lat, lng, altitude };
       updateHtmlLabels(currentBeachesList, activeSelectedBeach?.id, pov);
 
-      if (altitude < 0.25) {
+      // Automatic seamless handoff to detailed 2D/satellite view at low altitude (< 0.18)
+      if (altitude < 0.18) {
         const now = Date.now();
-        if (now - lastZoomTransitionTime > 3000) {
+        if (now - lastZoomTransitionTime > 1500) {
           lastZoomTransitionTime = now;
-          if (typeof onExtremeZoomCallback === 'function') {
-            onExtremeZoomCallback({ lat, lng, altitude });
+          if (typeof window.switchTo2DMap === 'function') {
+            window.switchTo2DMap({ lat, lng, zoom: 14 });
+          } else if (typeof onExtremeZoomCallback === 'function') {
+            onExtremeZoomCallback({ lat, lng, altitude, zoom: 14 });
           } else if (typeof window !== 'undefined' && typeof window.onGlobeExtremeZoom === 'function') {
-            window.onGlobeExtremeZoom({ lat, lng, altitude });
+            window.onGlobeExtremeZoom({ lat, lng, altitude, zoom: 14 });
           }
         }
       }
@@ -390,9 +400,10 @@ export function initGlobe(container, beaches, onSelectBeach, onExtremeZoom = nul
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.35;
       controls.enableDamping = true;
-      controls.dampingFactor = 0.08;
-      controls.minDistance = 115;
-      controls.maxDistance = 450;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 101.5; // Globe sphere radius is 100; allows surface deep zoom
+      controls.maxDistance = 800;
+      controls.zoomSpeed = 1.2;
 
       // Real-time horizon culling update on camera rotation/pan
       controls.addEventListener('change', () => {

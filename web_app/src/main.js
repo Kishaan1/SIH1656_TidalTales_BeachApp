@@ -973,26 +973,64 @@ function initGlobeView() {
     }
   }
 
-  window.onGlobeExtremeZoom = ({ lat, lng }) => {
+  window.onGlobeExtremeZoom = ({ lat, lng, zoom = 14 }) => {
     try {
       setProjectionView('2d');
       if (map && typeof map.flyTo === 'function') {
-        map.flyTo([lat, lng], 14, { duration: 1.2 });
+        map.flyTo([lat, lng], zoom, { duration: 1.2 });
       }
       showHazardToast('Switched to 2D Road Map', 'Deep zoom active: street & shoreline resolution unlocked.');
     } catch (e) {}
+  };
+
+  window.switchTo2DMap = (options = {}) => {
+    setProjectionView('2d');
+    if (options && options.lat !== undefined && options.lng !== undefined) {
+      const zoomLevel = options.zoom || 14;
+      if (map && typeof map.flyTo === 'function') {
+        map.flyTo([options.lat, options.lng], zoomLevel, { duration: 1.2 });
+      }
+    }
   };
 
   const toggleBtn = document.getElementById('btn-toggle-globe-view');
   toggleBtn?.addEventListener('click', () => {
     setProjectionView(currentProjectionView === '3d' ? '2d' : '3d');
   });
+
+  // On-screen Zoom Control (+ / - Buttons)
+  document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
+    const myGlobe = globeInstance || window.myGlobe;
+    if (currentProjectionView === '3d' && myGlobe && typeof myGlobe.pointOfView === 'function') {
+      const current = myGlobe.pointOfView();
+      myGlobe.pointOfView({ altitude: Math.max(0.08, current.altitude * 0.65) }, 400);
+    } else if (map && typeof map.zoomIn === 'function') {
+      map.zoomIn();
+    }
+  });
+
+  document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
+    const myGlobe = globeInstance || window.myGlobe;
+    if (currentProjectionView === '3d' && myGlobe && typeof myGlobe.pointOfView === 'function') {
+      const current = myGlobe.pointOfView();
+      myGlobe.pointOfView({ altitude: Math.min(3.5, current.altitude * 1.5) }, 400);
+    } else if (map && typeof map.zoomOut === 'function') {
+      map.zoomOut();
+    }
+  });
 }
 
 function setProjectionView(mode) {
   currentProjectionView = mode;
   if (typeof window !== 'undefined') {
-    window.switchTo2DMap = () => setProjectionView('2d');
+    if (!window.switchTo2DMap) {
+      window.switchTo2DMap = (options = {}) => {
+        setProjectionView('2d');
+        if (options && options.lat !== undefined && options.lng !== undefined && map) {
+          map.flyTo([options.lat, options.lng], options.zoom || 14, { duration: 1.2 });
+        }
+      };
+    }
     window.setProjectionView = setProjectionView;
   }
   const globeContainer = document.getElementById('globe-3d-container');

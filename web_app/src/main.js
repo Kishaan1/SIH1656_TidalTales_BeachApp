@@ -1243,9 +1243,13 @@ function renderPolaroidCarousel() {
     const isSelected = beach.id === selectedBeachId;
 
     const card = document.createElement('div');
-    card.className = `polaroid-card ${isSelected ? 'selected' : ''}`;
+    card.className = `polaroid-card coastal-card ${isSelected ? 'selected' : ''}`;
     card.style.transform = `rotate(${rot}deg)`;
     card.id = `card-${beach.id}`;
+    card.setAttribute('data-beach-id', beach.id);
+    card.setAttribute('data-id', beach.id);
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
 
     const badgeClass = result.status === SuitabilityStatus.SAFE
       ? 'badge-safe'
@@ -1282,12 +1286,34 @@ function renderPolaroidCarousel() {
       </div>
     `;
 
-    card.addEventListener('click', () => {
-      handleCardClick(beach);
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onBeachCardSelected(beach);
     });
 
     carousel.appendChild(card);
   });
+
+  // Attach resilient event delegation on the carousel container
+  if (carousel && !carousel._delegationAttached) {
+    carousel._delegationAttached = true;
+    carousel.addEventListener('click', (e) => {
+      const card = e.target.closest('.polaroid-card, .coastal-card, [data-beach-id], [data-id]');
+      if (!card) return;
+
+      const beachId = card.dataset.beachId || card.getAttribute('data-id') || card.id?.replace('card-', '');
+      const titleText = card.querySelector('.polaroid-beach-name, h3, .beach-title')?.textContent?.trim();
+
+      const beach = beaches.find(b => 
+        String(b.id) === String(beachId) || 
+        (titleText && b.name.trim().toLowerCase() === titleText.toLowerCase())
+      );
+
+      if (beach) {
+        onBeachCardSelected(beach);
+      }
+    });
+  }
 }
 
 export function calculateSuitability(beach) {
@@ -1430,31 +1456,44 @@ window.openBeachDetailSheet = function(beach) {
 
 export function onBeachCardSelected(beach) {
   if (typeof beach === 'string' || typeof beach === 'number') {
-    beach = beaches.find(b => b.id === beach) || beaches[0];
+    beach = beaches.find(b => String(b.id) === String(beach) || b.name === beach) || beaches[0];
   }
   if (!beach) return;
 
-  const lat = beach.lat ?? beach.latitude;
-  const lng = beach.lng ?? beach.longitude;
+  selectedBeachId = beach.id;
+
+  const lat = beach.latitude ?? beach.lat;
+  const lng = beach.longitude ?? beach.lng;
   const isGlobeActive = currentProjectionView === '3d';
   const myGlobe = globeInstance || window.myGlobe;
 
+  // 1. Globe Mode Navigation
   if (isGlobeActive && typeof myGlobe !== 'undefined' && myGlobe) {
-    // 1. Smooth Google Earth-style fly-to animation
-    myGlobe.pointOfView({
-      lat,
-      lng,
-      altitude: 0.45 // Close regional zoom
-    }, 1800);
-    flyToBeach(beach, 0.45, 1800);
-  } else if (map && typeof map.flyTo === 'function') {
-    map.flyTo([lat, lng], 14, { duration: 1.5 });
+    if (typeof myGlobe.pointOfView === 'function') {
+      myGlobe.pointOfView({ lat, lng, altitude: 0.45 }, 1400);
+    }
+    flyToBeach(beach, 0.45, 1400);
+  } 
+  // 2. Leaflet 2D Road Map Navigation
+  else if (map && typeof map.flyTo === 'function') {
+    map.flyTo([lat, lng], 13, { duration: 1.2 });
     if (markers[beach.id]) markers[beach.id].openPopup();
   }
 
-  // 2. Open full detail sheet with INCOIS/telemetry & AI briefing
+  // Highlight selected card visually in sidebar/carousel
+  document.querySelectorAll('.polaroid-card, .coastal-card').forEach(el => el.classList.remove('selected'));
+  const cardEl = document.getElementById(`card-${beach.id}`) || document.querySelector(`[data-beach-id="${beach.id}"]`);
+  if (cardEl) {
+    cardEl.classList.add('selected');
+    cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // 3. Open full detail sheet floating over active view
   if (typeof window.openBeachDetailSheet === 'function') {
     window.openBeachDetailSheet(beach);
+  } else {
+    updateBottomSheetContent(beach);
+    syncSimulatorInputs(beach);
   }
 }
 
